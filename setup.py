@@ -10,7 +10,13 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=7.0', ]
+requirements = [
+    'Click>=7.0', 
+    'pyspark==2.4.5',
+    'networkx>=2.5.1',
+    'jsonschema>=3.2.0',
+    'pyyaml>=5.4.1'
+]
 
 setup_requirements = ['pytest-runner', ]
 
