@@ -1,4 +1,4 @@
-from framework.src.postprocess.implementations.spark.sparkprocessor import SparkWorkflowManager
+from ml_ops.data_prep.sparkprocessor import SparkWorkflowManager
 import pytest
 import os
 import yaml
