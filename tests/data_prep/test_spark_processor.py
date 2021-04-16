@@ -31,6 +31,7 @@ def test_valid_spark_processor(spark_session):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -38,6 +39,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: load_department
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -45,6 +47,7 @@ processors:
       path: {FIXTURE_DIR}/department.csv
   - name: join_employee_department
     type: join_processor
+    version: v1
     properties:
       filter_condition: dept_id == 1
       storage_level: MEMORY_ONLY
@@ -56,6 +59,7 @@ processors:
       - dept_id
   - name: write_enriched_employee
     type: write_processor
+    version: v1
     properties:
         format: csv
         path: {FIXTURE_DIR}/output/enriched_employee
@@ -89,12 +93,15 @@ processors:
         header: 'true'
       path: {FIXTURE_DIR}/employee.csv
     type: load_processor
+    version: v1
   - name: filter_employee
     properties:
       query: SELECT emp_id, name, age, dept_id FROM load_employee WHERE dept_id == 1
     type: sql_processor
+    version: v1
   - name: write_filter_employee
     type: write_processor
+    version: v1
     properties:
         format: csv
         path: {FIXTURE_DIR}/output/sql_output
@@ -120,6 +127,7 @@ def test_valid_spark_repartition_processor(spark_session):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -127,6 +135,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: repartition_employee
     type: repartition_processor
+    version: v1
     properties:
       repartition:
         num_partitions: 5
@@ -146,6 +155,7 @@ def test_valid_spark_coalesce_processor(spark_session):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -153,11 +163,13 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: repartition_employee
     type: repartition_processor
+    version: v1
     properties:
       repartition:
         num_partitions: 8
   - name: coalesce_employee
     type: repartition_processor
+    version: v1
     properties:
       coalesce:
         num_partitions: 5
@@ -179,6 +191,7 @@ def test_valid_limit_processor(spark_session):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -186,6 +199,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: repartition_employee
     type: repartition_processor
+    version: v1
     properties:
       repartition:
         num_partitions: 8
@@ -193,6 +207,7 @@ processors:
           - dept_id
   - name: coalesce_employee
     type: repartition_processor
+    version: v1
     properties:
       limit: 1
       coalesce:
@@ -215,6 +230,7 @@ def test_valid_persist_processor(spark_session):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -222,6 +238,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: persist_employee
     type: persist_processor
+    version: v1
     properties:
       storage_level: MEMORY_ONLY
 
@@ -243,6 +260,7 @@ def test_valid_show_processor(spark_session, capsys):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -250,6 +268,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: show_employee
     type: show_processor
+    version: v1
     properties:
       n: 1
 
@@ -273,6 +292,7 @@ def test_valid_union_processor(spark_session):
 processors:
   - name: load_employee1
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -280,6 +300,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: load_employee2
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -287,6 +308,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: union_employee
     type: union_processor
+    version: v1
     properties:
       n: 1
 
@@ -313,6 +335,7 @@ def test_valid_aggregate_processor(spark_session):
 processors:
   - name: load_employee
     type: load_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -320,6 +343,7 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: agg_employee
     type: aggregate_processor
+    version: v1
     properties:
       group_by_columns:
         - dept_id
@@ -348,6 +372,7 @@ def test_missing_implementation(spark_session):
 processors:
   - name: load_employee
     type: random_processor
+    version: v1
     properties:
       format: csv
       options:
@@ -355,11 +380,13 @@ processors:
       path: {FIXTURE_DIR}/employee.csv
   - name: repartition_employee
     type: repartition_processor
+    version: v1
     properties:
       repartition:
         num_partitions: 8
   - name: coalesce_employee
     type: repartition_processor
+    version: v1
     properties:
       coalesce:
         num_partitions: 5
@@ -377,4 +404,4 @@ relations:
         SparkWorkflowManager(config=yaml.load(
             config), spark=spark_session).run()
     assert str(
-        excinfo.value) == 'SparkProcessor implementation not found for random_processor'
+        excinfo.value) == 'SparkProcessor implementation not found for random_processor with version v1.'

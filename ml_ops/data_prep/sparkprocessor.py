@@ -45,10 +45,10 @@ class SparkProcessor(ABC):
         jsonschema.validate(instance=config, schema=cls.schema)
 
     @staticmethod
-    def get_spark_processor(type: str):
-        assert type in SparkProcessor._types, \
-            f'SparkProcessor implementation not found for {type}'
-        return SparkProcessor._types[type]
+    def get_spark_processor(type: str, version: str):
+        assert type in SparkProcessor._types and version in SparkProcessor._types[type], \
+            f'SparkProcessor implementation not found for {type} with version {version}.'
+        return SparkProcessor._types[type][version]
 
     def __init__(self, spark: SparkSession, name: str, properties: Dict = {}, depedencies: List[Dependency] = []) -> None:
         super().__init__()
@@ -62,9 +62,9 @@ class SparkProcessor(ABC):
         self.dependencies = depedencies
 
     @classmethod
-    def __init_subclass__(cls, type, **kwargs):
+    def __init_subclass__(cls, type, version, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls._types[type] = cls
+        cls._types[type] = {version: cls}
 
     @abstractmethod
     def run(self) -> DataFrame:
@@ -95,7 +95,7 @@ class SparkProcessor(ABC):
         return limit_inner
 
 
-class RepartitionProcessor(SparkProcessor, type='repartition_processor'):
+class RepartitionProcessor(SparkProcessor, type='repartition_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -159,7 +159,7 @@ class RepartitionProcessor(SparkProcessor, type='repartition_processor'):
         return df
 
 
-class PersistProcessor(SparkProcessor, type='persist_processor'):
+class PersistProcessor(SparkProcessor, type='persist_processor', version='v1'):
 
     storage_level_map = {
         'DISK_ONLY': StorageLevel.DISK_ONLY,
@@ -206,7 +206,7 @@ class PersistProcessor(SparkProcessor, type='persist_processor'):
         return df
 
 
-class LoadProcessor(SparkProcessor, type='load_processor'):
+class LoadProcessor(SparkProcessor, type='load_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -244,7 +244,7 @@ class LoadProcessor(SparkProcessor, type='load_processor'):
         return df
 
 
-class LoadStreamProcessor(SparkProcessor, type='load_stream_processor'):
+class LoadStreamProcessor(SparkProcessor, type='load_stream_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -285,7 +285,7 @@ class LoadStreamProcessor(SparkProcessor, type='load_stream_processor'):
         return df
 
 
-class WriteStreamProcessor(SparkProcessor, type='write_stream_processor'):
+class WriteStreamProcessor(SparkProcessor, type='write_stream_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -357,7 +357,7 @@ class WriteStreamProcessor(SparkProcessor, type='write_stream_processor'):
         return df
 
 
-class ShowProcessor(SparkProcessor, type='show_processor'):
+class ShowProcessor(SparkProcessor, type='show_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -384,7 +384,7 @@ class ShowProcessor(SparkProcessor, type='show_processor'):
         return df
 
 
-class JoinProcessor(SparkProcessor, type='join_processor'):
+class JoinProcessor(SparkProcessor, type='join_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -424,7 +424,7 @@ class JoinProcessor(SparkProcessor, type='join_processor'):
         return df
 
 
-class UnionProcessor(SparkProcessor, type='union_processor'):
+class UnionProcessor(SparkProcessor, type='union_processor', version='v1'):
 
     @SparkProcessor.select
     @SparkProcessor.limit
@@ -435,7 +435,7 @@ class UnionProcessor(SparkProcessor, type='union_processor'):
         return df
 
 
-class WriteProcessor(SparkProcessor, type='write_processor'):
+class WriteProcessor(SparkProcessor, type='write_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -471,7 +471,7 @@ class WriteProcessor(SparkProcessor, type='write_processor'):
         return source_df
 
 
-class SQLProcessor(SparkProcessor, type='sql_processor'):
+class SQLProcessor(SparkProcessor, type='sql_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -510,7 +510,7 @@ class SQLProcessor(SparkProcessor, type='sql_processor'):
         return df
 
 
-class AggregateProcessor(SparkProcessor, type='aggregate_processor'):
+class AggregateProcessor(SparkProcessor, type='aggregate_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -597,7 +597,7 @@ class SparkWorkflowManager:
         processor_configs = config['processors']
         for proc_config in processor_configs:
             processor: SparkProcessor = SparkProcessor.get_spark_processor(
-                proc_config['type'])
+                proc_config['type'], proc_config['version'])
             processor.validate(proc_config)
 
         # check for duplciate processor names
@@ -623,6 +623,7 @@ class SparkWorkflowManager:
         properties = config[node].get('properties', {})
         processor_name = config[node]['name']
         processor_type = config[node]['type']
+        processor_version = config[node]['version']
         predecessors = list(graph.predecessors(node))
         dependencies = []
         if not bool(predecessors):
@@ -636,7 +637,7 @@ class SparkWorkflowManager:
                 raise error
             dependencies.append(Dependency(df, predecessor))
         processor = SparkProcessor.get_spark_processor(
-            processor_type)(session, processor_name, properties, dependencies)
+            processor_type, processor_version)(session, processor_name, properties, dependencies)
         return processor
 
     def run(self):
