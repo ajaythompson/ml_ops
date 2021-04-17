@@ -11,3 +11,4 @@ Click
 pytest
 pytest-runner
 autopep8
+pylama

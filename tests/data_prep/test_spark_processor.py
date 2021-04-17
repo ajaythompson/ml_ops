@@ -96,7 +96,9 @@ processors:
     version: v1
   - name: filter_employee
     properties:
-      query: SELECT emp_id, name, age, dept_id FROM load_employee WHERE dept_id == 1
+      query: >
+        SELECT emp_id, name, age, dept_id
+        FROM load_employee WHERE dept_id == 1
     type: sql_processor
     version: v1
   - name: write_filter_employee
@@ -252,7 +254,7 @@ relations:
     dfs = SparkWorkflowManager(config=yaml.load(
         config), spark=spark_session).run()
 
-    assert dfs[0].storageLevel.useMemory == True
+    assert dfs[0].storageLevel.useMemory is True
 
 
 def test_valid_show_processor(spark_session, capsys):
@@ -404,4 +406,5 @@ relations:
         SparkWorkflowManager(config=yaml.load(
             config), spark=spark_session).run()
     assert str(
-        excinfo.value) == 'SparkProcessor implementation not found for random_processor with version v1.'
+        excinfo.value) == 'SparkProcessor implementation not found ' \
+                          'for random_processor with version v1.'
