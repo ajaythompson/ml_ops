@@ -6,7 +6,6 @@ import pytest
 
 from click.testing import CliRunner
 
-from ml_ops import ml_ops
 from ml_ops import cli
 
 

@@ -46,20 +46,24 @@ class SparkProcessor(ABC):
 
     @staticmethod
     def get_spark_processor(type: str, version: str):
-        assert type in SparkProcessor._types and version in SparkProcessor._types[type], \
-            f'SparkProcessor implementation not found for {type} with version {version}.'
+        assert type in SparkProcessor._types and \
+            version in SparkProcessor._types[type], \
+            f'SparkProcessor implementation not found ' \
+            f'for {type} with version {version}.'
         return SparkProcessor._types[type][version]
 
-    def __init__(self, spark: SparkSession, name: str, properties: Dict = {}, depedencies: List[Dependency] = []) -> None:
+    def __init__(self, spark: SparkSession, name: str, properties: Dict = {
+    }, dependencies: List[Dependency] = []) -> None:
         super().__init__()
         self.spark = spark
         self.name = name
         self.properties = properties
-        missing_propeties = list(
+        missing_properties = list(
             set(self.mandatory_properties).difference(properties.keys()))
-        assert not bool(missing_propeties), \
-            f'Missing mandatory properties {missing_propeties} for processor {self.name}!'
-        self.dependencies = depedencies
+        assert not bool(missing_properties), \
+            f'Missing mandatory properties {missing_properties} ' \
+            f'for processor {self.name}!'
+        self.dependencies = dependencies
 
     @classmethod
     def __init_subclass__(cls, type, version, **kwargs):
@@ -95,7 +99,8 @@ class SparkProcessor(ABC):
         return limit_inner
 
 
-class RepartitionProcessor(SparkProcessor, type='repartition_processor', version='v1'):
+class RepartitionProcessor(
+        SparkProcessor, type='repartition_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -145,12 +150,13 @@ class RepartitionProcessor(SparkProcessor, type='repartition_processor', version
     def run(self) -> DataFrame:
         df = self.dependencies[0].df
         if 'repartition' in self.properties:
+            repartition_config = self.properties['repartition']
             repartition_params = []
-            if 'num_partitions' in self.properties['repartition']:
-                num_partitions = self.properties['repartition']['num_partitions']
+            if 'num_partitions' in repartition_config:
+                num_partitions = repartition_config['num_partitions']
                 repartition_params.append(num_partitions)
-            if 'cols' in self.properties['repartition']:
-                cols = self.properties['repartition']['cols']
+            if 'cols' in repartition_config:
+                cols = repartition_config['cols']
                 repartition_params.append(*cols)
             df = df.repartition(*repartition_params)
         elif 'coalesce' in self.properties:
@@ -174,34 +180,40 @@ class PersistProcessor(SparkProcessor, type='persist_processor', version='v1'):
     schema = {
         'type': 'object',
         'properties': {
-                'name': {'type': 'string'},
-                'type': {'type': 'string'},
+            'name': {
+                'type': 'string'},
+            'type': {
+                'type': 'string'},
+            'properties': {
+                'type': 'object',
                 'properties': {
-                    'type': 'object',
-                    'properties': {
                         'storage_level': {
                             'type': 'string',
-                            'enum': ['DISK_ONLY', 'DISK_ONLY_2', 'MEMORY_ONLY', 'MEMORY_ONLY_2', 'MEMORY_AND_DISK', 'MEMORY_AND_DISK_2', 'OFF_HEAP'],
+                            'enum': [
+                                'DISK_ONLY',
+                                'DISK_ONLY_2',
+                                'MEMORY_ONLY',
+                                'MEMORY_ONLY_2',
+                                'MEMORY_AND_DISK',
+                                'MEMORY_AND_DISK_2',
+                                'OFF_HEAP'],
                         },
-                        'select_columns': {
+                    'select_columns': {
                             'type': 'array',
-                            'items': {
-                                'type': 'string'
-                            }
-                        },
-                        'filter_condition': {'type': 'string'},
-                        'limit': {'type': 'number'}
-                    },
-                    'required': ['storage_level']
-                }
-        }
-    }
+                                    'items': {
+                                        'type': 'string'}},
+                    'filter_condition': {
+                            'type': 'string'},
+                    'limit': {
+                            'type': 'number'}},
+                'required': ['storage_level']}}}
 
     @SparkProcessor.select
     @SparkProcessor.limit
     @SparkProcessor.filter
     def run(self) -> DataFrame:
-        storage_level = self.storage_level_map[self.properties['storage_level']]
+        storage_level_key = self.properties['storage_level']
+        storage_level = self.storage_level_map[storage_level_key]
         df = self.dependencies[0].df.persist(storage_level)
         return df
 
@@ -244,7 +256,8 @@ class LoadProcessor(SparkProcessor, type='load_processor', version='v1'):
         return df
 
 
-class LoadStreamProcessor(SparkProcessor, type='load_stream_processor', version='v1'):
+class LoadStreamProcessor(
+        SparkProcessor, type='load_stream_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -285,7 +298,8 @@ class LoadStreamProcessor(SparkProcessor, type='load_stream_processor', version=
         return df
 
 
-class WriteStreamProcessor(SparkProcessor, type='write_stream_processor', version='v1'):
+class WriteStreamProcessor(
+        SparkProcessor, type='write_stream_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -510,7 +524,8 @@ class SQLProcessor(SparkProcessor, type='sql_processor', version='v1'):
         return df
 
 
-class AggregateProcessor(SparkProcessor, type='aggregate_processor', version='v1'):
+class AggregateProcessor(
+        SparkProcessor, type='aggregate_processor', version='v1'):
 
     schema = {
         'type': 'object',
@@ -584,9 +599,9 @@ class SparkWorkflowManager:
                             'left': {'type': 'string'},
                             'right': {'type': 'string'}
                         },
-                        "required": ["left", "right"]
+                        "required": ["left", "right"],
                     }
-            }
+                    }
         },
         'required': ['processors', 'relations']
     }
@@ -600,13 +615,14 @@ class SparkWorkflowManager:
                 proc_config['type'], proc_config['version'])
             processor.validate(proc_config)
 
-        # check for duplciate processor names
+        # check for duplicate processor names
         processor_names = [processor['name']
                            for processor in config['processors']]
         duplicate_names = [item for item, count in Counter(
             processor_names).items() if count > 1]
         assert len(duplicate_names) == 0, \
-            f'Processor names in {duplicate_names} is repeated. Processors should have unique names.'
+            f'Processor names in {duplicate_names} is repeated. ' \
+            'Processors should have unique names.'
 
     def __init__(self, config, spark) -> None:
         super().__init__()
@@ -619,7 +635,8 @@ class SparkWorkflowManager:
         self.graph.add_edges_from(edges)
         self.spark = spark
 
-    def process_composition(self, node, config, graph: DiGraph, session) -> SparkProcessor:
+    def process_composition(
+            self, node, config, graph: DiGraph, session) -> SparkProcessor:
         properties = config[node].get('properties', {})
         processor_name = config[node]['name']
         processor_type = config[node]['type']
@@ -637,24 +654,30 @@ class SparkWorkflowManager:
                 raise error
             dependencies.append(Dependency(df, predecessor))
         processor = SparkProcessor.get_spark_processor(
-            processor_type, processor_version)(session, processor_name, properties, dependencies)
+            processor_type, processor_version)(
+            session, processor_name, properties, dependencies)
         return processor
 
     def run(self):
 
-        assert 'processors' in self.config, 'Missing "processors" in {self.config}!'
+        assert 'processors' in self.config, \
+            'Missing "processors" in {self.config}!'
 
         processor_mandatory_keys = ['name', 'type']
-        for processor, key in itertools.product(self.config['processors'], processor_mandatory_keys):
-            assert key in processor, f'Missing mandatory processor config "{key}" in {processor}!'
+        for processor, key in itertools.product(
+                self.config['processors'], processor_mandatory_keys):
+            assert key in processor, \
+                f'Missing mandatory processor config "{key}" in {processor}!'
 
         sink_nodes = [n for n, d in self.graph.out_degree() if d == 0]
-        processor_config_map = {
-            processor['name']: processor for processor in self.config['processors']}
+        processor_config_map = {processor['name']: processor
+                                for processor in self.config['processors']}
 
         output_dfs = []
         for node in sink_nodes:
-            processor = self.process_composition(node, processor_config_map, graph=self.graph,
+            processor = self.process_composition(node,
+                                                 processor_config_map,
+                                                 graph=self.graph,
                                                  session=self.spark)
             output_dfs.append(processor.run())
         return output_dfs
