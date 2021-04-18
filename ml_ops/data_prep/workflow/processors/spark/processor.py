@@ -26,6 +26,7 @@ class SparkProcessor(ABC):
     schema = {
         'type': 'object',
         'properties': {
+                'id': {'type': 'string'},
                 'name': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {'type': 'object'}
@@ -45,11 +46,11 @@ class SparkProcessor(ABC):
             f'for {type} with version {version}.'
         return SparkProcessor._types[type][version]
 
-    def __init__(self, spark: SparkSession, name: str, properties: Dict = {
+    def __init__(self, spark: SparkSession, id: str, properties: Dict = {
     }, dependencies: List[Dependency] = []) -> None:
         super().__init__()
         self.spark = spark
-        self.name = name
+        self.id = id
         self.properties = properties
         missing_properties = list(
             set(self.mandatory_properties).difference(properties.keys()))
