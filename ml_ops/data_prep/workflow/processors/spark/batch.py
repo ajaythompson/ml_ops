@@ -129,6 +129,7 @@ class LoadProcessor(SparkProcessor, type='load_processor', version='v1'):
     schema = {
         'type': 'object',
         'properties': {
+                'id': {'type': 'string'},
                 'name': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {
@@ -167,7 +168,7 @@ class ShowProcessor(SparkProcessor, type='show_processor', version='v1'):
     schema = {
         'type': 'object',
         'properties': {
-                'name': {'type': 'string'},
+                '': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {
                     'type': 'object',
@@ -194,7 +195,7 @@ class JoinProcessor(SparkProcessor, type='join_processor', version='v1'):
     schema = {
         'type': 'object',
         'properties': {
-                'name': {'type': 'string'},
+                '': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {
                     'type': 'object',
@@ -245,6 +246,7 @@ class WriteProcessor(SparkProcessor, type='write_processor', version='v1'):
     schema = {
         'type': 'object',
         'properties': {
+                'id': {'type': 'string'},
                 'name': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {
@@ -281,7 +283,7 @@ class SQLProcessor(SparkProcessor, type='sql_processor', version='v1'):
     schema = {
         'type': 'object',
         'properties': {
-                'name': {'type': 'string'},
+                '': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {
                     'type': 'object',
@@ -321,7 +323,7 @@ class AggregateProcessor(
     schema = {
         'type': 'object',
         'properties': {
-                'name': {'type': 'string'},
+                '': {'type': 'string'},
                 'type': {'type': 'string'},
                 'properties': {
                     'type': 'object',
