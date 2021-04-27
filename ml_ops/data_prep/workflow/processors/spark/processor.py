@@ -19,9 +19,9 @@ class SparkProcessor(ABC):
 
     _types = {}
 
-    @property
-    def mandatory_properties(self):
-        return []
+    mandatory_properties = []
+
+    description = 'Base spark processor.'
 
     schema = {
         'type': 'object',
@@ -36,7 +36,9 @@ class SparkProcessor(ABC):
     @classmethod
     def validate(cls, config):
         # validate Spark post processor schema
-        jsonschema.validate(instance=config, schema=cls.schema)
+        jsonschema.validate(instance=config, schema=SparkProcessor.schema)
+        properties = config.get('properties', {})
+        jsonschema.validate(instance=properties, schema=cls.schema)
 
     @staticmethod
     def get_spark_processor(type: str, version: str):

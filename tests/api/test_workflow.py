@@ -101,3 +101,12 @@ def test_valid_relation(client, spark_session):
     actual = spark_session.read.option('header', True).csv(
         f'{TEST_DIR}/employee.csv').collect()
     assert actual == expected
+
+
+def test_valid_get_processor(client, spark_session):
+    processor_name = 'load_processor'
+    url = f'{workflow.PROCESSOR_BASE_PATH}?name={processor_name}'
+    response = client.get(url).json
+    actual = response['description']
+    expected = 'Processor to read datasource into a dataframe.'
+    assert actual == expected

@@ -1,3 +1,4 @@
+from ml_ops.data_prep.workflow.processors.spark.processor import SparkProcessor
 from typing import List
 
 from ml_ops.data_prep.workflow import SparkWorkflowManager
@@ -5,8 +6,10 @@ from flask import Flask, session, request, g
 from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
 import uuid
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 # app.config.from_envvar('MLOPS_CONFIG_PATH')
 app.config
 
@@ -55,6 +58,7 @@ def create_workflow():
 
 
 WORKFLOW_BASE_PATH = '/workflow'
+PROCESSORS_BASE_PATH = f'{WORKFLOW_BASE_PATH}/processors'
 PROCESSOR_BASE_PATH = f'{WORKFLOW_BASE_PATH}/processor'
 RELATION_BASE_PATH = f'{WORKFLOW_BASE_PATH}/relation'
 WORKFLOW_RUN_PATH = f'{PROCESSOR_BASE_PATH}/run'
@@ -69,8 +73,14 @@ def workflow():
         return get_workflow()
 
 
+@app.route(f'{PROCESSORS_BASE_PATH}', methods=['GET'])
+def get_processors():
+    if request.method == 'GET':
+        return {'processor_list': list(SparkProcessor._types.keys())}
+
+
 @app.route(f'{PROCESSOR_BASE_PATH}', methods=['POST'])
-def add_processor():
+def workflow_processor():
     if request.method == 'POST':
         workflow = session['workflow']
         processors: List = workflow['processors']
@@ -80,8 +90,21 @@ def add_processor():
         return get_workflow()
 
 
+@app.route(f'{PROCESSOR_BASE_PATH}', methods=['GET'])
+def processor():
+    if request.method == 'GET':
+        name = request.args.get('name')
+        version = request.args.get('version', 'v1')
+        processor: SparkProcessor = SparkProcessor._types[name][version]
+        result = {
+            'description': processor.description,
+            'properties_schema': processor.schema,
+        }
+        return result
+
+
 @app.route(f'{RELATION_BASE_PATH}', methods=['POST'])
-def add_relation():
+def relation():
     if request.method == 'POST':
         workflow = session['workflow']
         relations: List = workflow['relations']
@@ -92,7 +115,7 @@ def add_relation():
 
 
 @app.route(f'{WORKFLOW_RUN_PATH}', methods=['POST'])
-def run_workflow():
+def workflow_run():
     spark = get_spark_session()
     workflow = get_workflow()
     workflow_mgr = SparkWorkflowManager.get_workflow_manager(workflow)
