@@ -2,7 +2,7 @@ import './App.css';
 import { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { AppBar, Toolbar} from '@material-ui/core';
-import ProcessorsModal from './components/ProcessorsModal';
+import { ProcessorsModal } from './components/ProcessorsModal';
 
 const App = () => {
 

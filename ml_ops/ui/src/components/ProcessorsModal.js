@@ -1,7 +1,7 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Modal from '@material-ui/core/Modal';
-import { getProcessors, getProcessor } from '../api/WorkflowAPI';
+import { getProcessor, getProcessors } from '../api/WorkflowAPI';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -9,12 +9,13 @@ import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import { ListItem } from '@material-ui/core';
+import Processor from './ProcessorModal';
 
 function rand() {
   return Math.round(Math.random() * 20) - 10;
 }
 
-function getModalStyle() {
+export function getModalStyle() {
   const top = 50 + rand();
   const left = 50 + rand();
 
@@ -27,7 +28,7 @@ function getModalStyle() {
   };
 }
 
-const useStyles = makeStyles((theme) => ({
+export const useStyles = makeStyles((theme) => ({
   paper: {
     position: 'absolute',
     width: 400,
@@ -42,15 +43,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ProcessorsModal() {
+export function ProcessorsModal() {
   const classes = useStyles();
   // getModalStyle is not a pure function, we roll the style only on the first render
   const [modalStyle] = React.useState(getModalStyle);
   const [open, setOpen] = React.useState(false);
   const [processorList, setProcessorList] = React.useState([]);
-  const [propertiesList, setPropertiesList] = React.useState([]);
   const [processorOpen, setProcessorOpen] = React.useState(false);
-  // let processorList = [1, 2, 3]
+  const [processorName, setProcessorName] = React.useState('');
+  const [processor, setProcessor] = React.useState('dummy');
 
   const handleOpen = () => {
     getProcessors()
@@ -63,16 +64,6 @@ export default function ProcessorsModal() {
 
   const handleClose = () => {
     setOpen(false);
-  };
-
-  const handleProcessorOpen = (name) => {
-    handleClose();
-    getProcessor(name)
-      .then(res => {
-        setPropertiesList(res.data.properties_schema.properties)
-        console.log(processorList)
-      })
-    setProcessorOpen(true);
   };
 
   const handleProcessorClose = () => {
@@ -89,26 +80,6 @@ export default function ProcessorsModal() {
     </div>
   );
 
-  const processorModal = (
-    <TableContainer style={modalStyle} className={classes.paper}>
-      <Table className={classes.table} aria-label="simple table" size='small' stickyHeader>
-        <TableHead>
-          <TableRow>
-            <TableCell>Processor</TableCell>
-          </TableRow>
-        </TableHead>
-      </Table>
-      <TableBody>
-      {propertiesList.map((key, value) => (
-            <TableRow key={ListItem}>
-              <TableCell component="th" scope="row">
-                  {key}
-              </TableCell>
-            </TableRow>
-          ))}
-      </TableBody>
-    </TableContainer>
-  );
 
   const body = (
     <TableContainer style={modalStyle} className={classes.paper}>
@@ -119,10 +90,16 @@ export default function ProcessorsModal() {
           </TableRow>
         </TableHead>
         <TableBody>
-        {processorList.map((name) => (
+          {processorList.map((name) => (
             <TableRow key={ListItem}>
               <TableCell component="th" scope="row">
-                <button onClick={handleProcessorOpen}>
+                <button onClick={() => {
+                  setOpen(false);
+                  setProcessorName(name);
+                  setProcessor(getProcessor(name)['description']);
+                  console.log(processor)
+                  setProcessorOpen(true);
+                }}>
                   {name}
                 </button>
 
@@ -133,6 +110,14 @@ export default function ProcessorsModal() {
       </Table>
     </TableContainer>
   );
+
+  const proc = (name) => {
+    return (
+      <div style={modalStyle} className={classes.paper}>
+        name: {processor}
+        description: {processor}
+      </div>)
+  }
 
   return (
     <div>
@@ -153,7 +138,7 @@ export default function ProcessorsModal() {
         aria-labelledby="simple-modal-title"
         aria-describedby="simple-modal-description"
       >
-        {processorModal}
+        {proc(processorName)}
       </Modal>
     </div>
   );
