@@ -2,7 +2,7 @@ import './App.css';
 import { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { AppBar, Toolbar} from '@material-ui/core';
-import { ProcessorsModal } from './components/ProcessorsModal';
+import { ProcessorList } from './components/ProcessorList';
 
 const App = () => {
 
@@ -66,7 +66,7 @@ const App = () => {
         <div className={classes.root}>
           <AppBar position="static">
             <Toolbar>
-              <ProcessorsModal />
+              <ProcessorList />
             </Toolbar>
           </AppBar>
         </div>
