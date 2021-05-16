@@ -1,8 +1,9 @@
 import './App.css';
 import { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { AppBar, Toolbar} from '@material-ui/core';
+import { AppBar, Toolbar } from '@material-ui/core';
 import { ProcessorList } from './components/ProcessorList';
+import Canvas from './components/Canvas';
 
 const App = () => {
 
@@ -69,6 +70,9 @@ const App = () => {
               <ProcessorList />
             </Toolbar>
           </AppBar>
+        </div>
+        <div>
+          <Canvas />
         </div>
       </body>
     </div>
