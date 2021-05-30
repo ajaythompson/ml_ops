@@ -1,4 +1,4 @@
-from ml_ops.data_prep.workflow.processors.spark.processor import SparkProcessor
+from ml_ops.data_prep.processor import SparkProcessor
 from typing import List
 
 from ml_ops.data_prep.workflow import SparkWorkflowManager

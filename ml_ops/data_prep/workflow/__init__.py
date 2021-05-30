@@ -1,150 +1,248 @@
-from collections import Counter
-from functools import singledispatch
-from typing import Dict
-from ml_ops.data_prep.workflow.processors.spark.processor \
- import Dependency, SparkProcessor
+from abc import ABC, abstractmethod
+from typing import Union
+
+from pyspark.sql.session import SparkSession
+from ml_ops.data_prep.processor import ProcessorContext
+from ml_ops.data_prep.processor import Dependency, SparkProcessor
 import networkx as nx
 from networkx.classes.digraph import DiGraph
 import json
-import jsonschema
+import uuid
+
+
+class WFProcessor:
+
+    def __init__(self,
+                 name,
+                 type,
+                 property_groups):
+        self.id = str(uuid.uuid1())
+        self.name = name
+        self.type = type
+        self.property_groups = property_groups
+
+
+class WFRelation:
+
+    def __init__(self, left, right) -> None:
+        self.id = str(uuid.uuid1())
+        self.left = left
+        self.right = right
+
+
+class Workflow:
+
+    def __init__(self) -> None:
+        self.id = str(uuid.uuid1())
+        self.processors = {}
+        self.relations = {}
+
+    def add_processor(self, wf_processor: WFProcessor):
+        self.processors[wf_processor.id] = wf_processor
+        return self
+
+    def add_relation(self, wf_relation: WFRelation):
+        self.relations[wf_relation.id] = wf_relation
+        return self
+
+    def get_processor(self, processor_id) -> WFProcessor:
+        assert processor_id in self.processors, \
+            f'Processor with id {processor_id} not found.'
+        return self.processors[processor_id]
+
+    def get_relation(self, relation_id):
+        return self.relations.get(relation_id)
+
+    def update_processor(self, processor_id, wf_processor: WFProcessor):
+        wf_processor.id(processor_id)
+        self.processors.update(processor_id, wf_processor)
+        return self
+
+    def update_relation(self, relation_id, wf_relation: WFRelation):
+        wf_relation.id(wf_relation)
+        self.relations.update(relation_id, wf_relation)
+        return self
+
+    def remove_processor(self, processor_id):
+        self.processors.pop(processor_id)
+        return self
+
+    def get_graph(self):
+        graph = nx.DiGraph()
+        edges = [(relation.left, relation.right)
+                 for relation in self.relations.values()]
+        for processor in self.processors.values():
+            graph.add_node(processor.id)
+            graph.add_edges_from(edges)
+        return graph
+
+    @classmethod
+    def get_end_processors(cls, graph):
+        return [n for n, d in graph.out_degree() if d == 0]
+
+
+class WorkflowRepository(ABC):
+
+    @ abstractmethod
+    def create_workflow(self) -> Workflow:
+        """Adds a new workflow.
+
+        Returns:
+            str: workflow.
+        """
+        pass
+
+    @ abstractmethod
+    def read_workflow(self, id: str) -> Workflow:
+        """Fetch the workflow for the given id.
+
+        Args:
+            id (str): workflow id.
+
+        Returns:
+            Workflow: workflow.
+        """
+        pass
+
+    @ abstractmethod
+    def update_workflow(self, id: str, workflow: Workflow) -> Workflow:
+        """Updates the id with the given workflow.
+
+        Args:
+            id (str): Id of the workflow to be updated.
+            workflow (Workflow): The updated workflow.
+
+        Returns:
+            Workflow: The updated workflow.
+        """
+        pass
+
+    @ abstractmethod
+    def delete_workflow(self, id: str) -> None:
+        """Delete the workflow for the given id.
+
+        Args:
+            id (str): id of the workflow to be deleted.
+
+        """
+        pass
+
+
+class InMemoryWFRepository(WorkflowRepository, dict):
+
+    def create_workflow(self) -> Workflow:
+        workflow = Workflow()
+        self[workflow.id] = workflow
+        return workflow
+
+    def read_workflow(self, id: str) -> Workflow:
+        return self.get(id)
+
+    def update_workflow(self, id: str, workflow: Workflow) -> Workflow:
+        self.update(id, workflow)
+        return self.read_workflow(id)
+
+    def delete_workflow(self, id: str) -> None:
+        self.pop(id)
 
 
 class SparkWorkflowManager:
 
-    schema = {
-        'type': 'object',
-        'properties': {
-                'processors': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'id': {'type': 'string'},
-                            'type': {'type': 'string'},
-                            'properties': {'type': 'object'}
-                        }
-                    }
-                },
-            'relations': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'left': {'type': 'string'},
-                            'right': {'type': 'string'}
-                        },
-                        "required": ["left", "right"],
-                    }
-                    }
-        },
-        'required': ['processors', 'relations']
-    }
+    def __init__(self, wf_repo: WorkflowRepository) -> None:
+        self.wf_repo = wf_repo
+
+    def create_workflow(self) -> Workflow:
+        return self.wf_repo.create_workflow()
+
+    def read_workflow(self, id: str) -> Workflow:
+        workflow = self.wf_repo.read_workflow(id)
+        assert workflow is not None, \
+            'Failed to find workflow with id {id}.'
+        return workflow
+
+    def update_workflow(self, id: str, workflow: Workflow) -> Workflow:
+        return self.update_workflow(id, workflow)
+
+    def delete_workflow(self, id: str) -> None:
+        self.wf_repo.delete_workflow(id)
+
+    def add_processor(self, wf_id: str, wf_processor) -> None:
+        workflow = self.read_workflow(wf_id)
+        workflow.add_processor(wf_processor)
+        return workflow
 
     @classmethod
-    def validate(cls, config):
-        jsonschema.validate(instance=config, schema=cls.schema)
-        processor_configs = config['processors']
-        for proc_config in processor_configs:
-            processor: SparkProcessor = SparkProcessor.get_spark_processor(
-                proc_config['type'], proc_config['version'])
-            processor.validate(proc_config)
-
-        # check for duplicate processor ids
-        processor_ids = [processor['id'] for processor in config['processors']]
-        duplicate_ids = [item for item, count in Counter(
-            processor_ids).items() if count > 1]
-        assert len(duplicate_ids) == 0, \
-            f'Processor ids in {duplicate_ids} is repeated. ' \
-            'Processors should have unique id.'
-
-    def __init__(self, processors=[], relations=[]) -> None:
-        super().__init__()
-        self.df_map = {}
-        self.processors_map = {processor['id']: processor
-                               for processor in processors}
-        self.relations_map = {relation['id']: relation
-                              for relation in relations}
-
-    def add_processor(self, processor) -> None:
-        self.processors_map[processor['id']] = processor
-
-    def get_config(self):
-        config = {}
-        config['processors'] = list(self.processors_map.values())
-        config['relations'] = list(self.relations_map.values())
-        return config
-
-    @singledispatch
-    def get_workflow_manager(config: Dict):
-        SparkWorkflowManager.validate(config)
-        processors = config['processors']
-        relations = config['relations']
-        return SparkWorkflowManager(processors=processors,
-                                    relations=relations)
-
-    def process_composition(
-            self, node, config, graph: DiGraph, spark) -> SparkProcessor:
-        properties = config[node].get('properties', {})
-        processor_id = config[node]['id']
-        processor_type = config[node]['type']
-        processor_version = config[node]['version']
-        predecessors = list(graph.predecessors(node))
+    def get_dependency(cls,
+                       workflow: Workflow,
+                       processor_id: str,
+                       graph: DiGraph,
+                       spark: SparkSession) -> Union[Dependency, None]:
+        processor_config = workflow.get_processor(processor_id)
+        predecessors = []
+        if graph.number_of_edges() > 0:
+            predecessors = list(graph.predecessors(processor_id))
         dependencies = []
         if not bool(predecessors):
             predecessors = []
         for predecessor in predecessors:
-            prev_processor = self.process_composition(
-                predecessor, config, graph, spark)
-            try:
-                df = self.df_map.get(predecessor, prev_processor.run())
-            except Exception as error:
-                raise error
-            dependencies.append(Dependency(df, predecessor))
-        processor = SparkProcessor.get_spark_processor(
-            processor_type, processor_version)(
-            spark, processor_id, properties, dependencies)
-        return processor
+            dependencies.append(
+                cls.get_dependency(workflow, predecessor, graph, spark))
 
-    def run(self, spark):
-        config = {}
-        config['processors'] = list(self.processors_map.values())
-        config['relations'] = list(self.relations_map.values())
-        self.validate(config)
+        processor_context = ProcessorContext(
+            spark_session=spark,
+            property_groups=processor_config.property_groups,
+            dependencies=dependencies)
+        processor = SparkProcessor.get_spark_processor(processor_config.type)
 
-        graph = nx.DiGraph()
-        edges = [(relation['left'], relation['right'])
-                 for relation in config['relations']]
-        for processor in config['processors']:
-            graph.add_node(processor['id'])
-        graph.add_edges_from(edges)
+        return processor.run(processor_context)
 
-        sink_nodes = [n for n, d in graph.out_degree() if d == 0]
+    # def run(self, workflow_id, spark):
 
-        output_dfs = []
-        for node in sink_nodes:
-            processor = self.process_composition(node,
-                                                 self.processors_map,
-                                                 graph=graph,
-                                                 spark=spark)
-            output_dfs.append(processor.run())
-        return output_dfs
+    #     workflow: Workflow = self.wf_repo.read_workflow(workflow_id)
+    #     relations: WFRelation = workflow.relations
 
-    def show_json(self, node, limit, spark):
-        config = {}
-        config['processors'] = list(self.processors_map.values())
-        config['relations'] = list(self.relations_map.values())
-        self.validate(config)
-        graph = nx.DiGraph()
-        edges = [(relation['left'], relation['right'])
-                 for relation in config['relations']]
-        for processor in config['processors']:
-            graph.add_node(processor['id'])
-        graph.add_edges_from(edges)
+    #     graph = nx.DiGraph()
+    #     edges = relations
+    #     edges = [(relation.left, relation.right)
+    #              for relation in relations]
+    #     for processor in workflow.processors.values():
+    #         graph.add_node(processor.id)
+    #     graph.add_edges_from(edges)
 
-        processor = self.process_composition(node,
-                                             self.processors_map,
-                                             graph=graph,
-                                             spark=spark)
-        result = [json.loads(_) for _ in
-                  processor.run().limit(limit).toJSON().collect()]
+    #     sink_nodes = [n for n, d in graph.out_degree() if d == 0]
+
+    #     output_dfs = []
+    #     for node in sink_nodes:
+    #         processor = self.process_composition(node,
+    #                                              self.processors_map,
+    #                                              graph=graph,
+    #                                              spark=spark)
+    #         output_dfs.append(processor.run())
+    #     return output_dfs
+
+    def run(self,
+            workflow_id: str,
+            spark: SparkSession,
+            processor_id: str = None):
+
+        workflow = self.read_workflow(workflow_id)
+        graph = workflow.get_graph()
+        sink_processor_ids = workflow.get_end_processors(graph)
+        if processor_id is not None:
+            sink_processor_ids = [processor_id]
+
+        for processor_id in sink_processor_ids:
+            self.get_dependency(workflow, processor_id, graph, spark)
+
+    def show_json(self,
+                  workflow_id: str,
+                  processor_id: str,
+                  spark,
+                  limit=10):
+        workflow = self.read_workflow(workflow_id)
+        graph = workflow.get_graph()
+        dependency = self.get_dependency(workflow, processor_id, graph, spark)
+        df = dependency.df
+        json_result = df.limit(limit).toJSON().collect()
+        result = [json.loads(_) for _ in json_result]
         return result
