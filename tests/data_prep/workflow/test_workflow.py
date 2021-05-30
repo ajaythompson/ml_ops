@@ -1,6 +1,9 @@
+from ml_ops.data_prep.processor.batch import LoadProcessor, \
+    SQLProcessor, WriteProcessor
 from ml_ops.data_prep.workflow import InMemoryWFRepository, \
     WFProcessor, WFRelation
 from ml_ops.data_prep.workflow import SparkWorkflowManager
+from ml_ops.data_prep.processor import PropertyGroup, PropertyGroups
 from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
 import pytest
@@ -32,16 +35,17 @@ def get_load_processor(name,
                        format,
                        options={},
                        view_name=None) -> WFProcessor:
-    property_groups = {
-        'default': {
-            'path': path,
-            'format': format
-        },
-        'load_options': options
-    }
-
+    default_options = PropertyGroup()
+    default_options.set_property(LoadProcessor.PATH, path)
+    default_options.set_property(LoadProcessor.FORMAT, format)
     if view_name is not None:
-        property_groups['default']['view_name'] = view_name
+        default_options.set_property(LoadProcessor.VIEW_NAME, view_name)
+
+    property_groups = PropertyGroups()
+    property_groups.set_property_group(
+        LoadProcessor.DEFAULT_PROPS_GROUP, default_options)
+    property_groups.set_property_group(
+        LoadProcessor.LOAD_OPTIONS_GROUP, options)
 
     load_processor = WFProcessor(name=name,
                                  type='LoadProcessor',
@@ -51,16 +55,17 @@ def get_load_processor(name,
 
 
 def get_sql_processor(name, query) -> WFProcessor:
-    property_groups = {
-        'default': {
-            'query': query
-        },
-    }
+
+    default_options = PropertyGroup()
+    default_options.set_property(SQLProcessor.QUERY, query)
+
+    property_groups = PropertyGroups()
+    property_groups.set_property_group(
+        SQLProcessor.DEFAULT_PROPS_GROUP, default_options)
 
     sql_processor = WFProcessor(name=name,
                                 type='SQLProcessor',
-                                property_groups=property_groups
-                                )
+                                property_groups=property_groups)
 
     return sql_processor
 
@@ -69,13 +74,16 @@ def get_write_processor(name,
                         path,
                         format,
                         options={}) -> WFProcessor:
-    property_groups = {
-        'default': {
-            'path': path,
-            'format': format
-        },
-        'write_options': options
-    }
+
+    default_options = PropertyGroup()
+    default_options.set_property(LoadProcessor.PATH, path)
+    default_options.set_property(LoadProcessor.FORMAT, format)
+    property_groups = PropertyGroups()
+    property_groups.set_property_group(
+        WriteProcessor.DEFAULT_PROPS_GROUP, default_options)
+    property_groups.set_property_group(
+        WriteProcessor.WRITE_OPTIONS_GROUP, options
+    )
 
     write_processor = WFProcessor(name=name,
                                   type='WriteProcessor',

@@ -196,29 +196,12 @@ class SparkWorkflowManager:
 
         return processor.run(processor_context)
 
-    # def run(self, workflow_id, spark):
-
-    #     workflow: Workflow = self.wf_repo.read_workflow(workflow_id)
-    #     relations: WFRelation = workflow.relations
-
-    #     graph = nx.DiGraph()
-    #     edges = relations
-    #     edges = [(relation.left, relation.right)
-    #              for relation in relations]
-    #     for processor in workflow.processors.values():
-    #         graph.add_node(processor.id)
-    #     graph.add_edges_from(edges)
-
-    #     sink_nodes = [n for n, d in graph.out_degree() if d == 0]
-
-    #     output_dfs = []
-    #     for node in sink_nodes:
-    #         processor = self.process_composition(node,
-    #                                              self.processors_map,
-    #                                              graph=graph,
-    #                                              spark=spark)
-    #         output_dfs.append(processor.run())
-    #     return output_dfs
+    # @classmethod
+    # def validate_processor(cls, wf_processor: WFProcessor):
+    #     actual = wf_processor.property_groups
+    #     processor_type = wf_processor.type
+    #     processor = SparkProcessor.get_spark_processor(processor_type)
+    #     expected = processor.get_property_groups()
 
     def run(self,
             workflow_id: str,

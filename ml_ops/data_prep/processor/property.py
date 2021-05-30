@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import List
 
 
@@ -6,14 +7,12 @@ class PropertyDescriptor:
     def __init__(self,
                  name,
                  description,
-                 property_group,
                  required,
                  allowed_values,
                  default_value,
                  validators) -> None:
         self.name = name
         self.description = description
-        self.property_group = property_group
         self.required = required
         self.allowed_values = allowed_values
         self.default_value = default_value
@@ -25,7 +24,6 @@ class PropertyDescriptorBuilder:
     def __init__(self):
         self.__name = ''
         self.__description = ''
-        self.__property_group = 'default'
         self.__required = False
         self.__allowed_values = []
         self.__default_value = None
@@ -37,10 +35,6 @@ class PropertyDescriptorBuilder:
 
     def description(self, description):
         self.__description = description
-        return self
-
-    def property_group(self, property_group):
-        self.__property_group = property_group
         return self
 
     def required(self, required):
@@ -63,7 +57,6 @@ class PropertyDescriptorBuilder:
         return PropertyDescriptor(
             name=self.__name,
             description=self.__description,
-            property_group=self.__property_group,
             required=self.__required,
             allowed_values=self.__allowed_values,
             default_value=self.__default_value,
@@ -71,8 +64,17 @@ class PropertyDescriptorBuilder:
         )
 
 
-class PropertyGroup:
+class PropertyGroupDescriptor(ABC):
 
-    def __init__(self, group_name, prop_descriptors: List[PropertyDescriptor]):
+    def __init__(self, group_name,
+                 prop_descriptors: List[PropertyDescriptor] = []):
         self.group_name = group_name
-        self.prop_descriptors = {x.name: x for x in prop_descriptors}
+        self.prop_descriptors = {prop_descriptor.name: prop_descriptor
+                                 for prop_descriptor in prop_descriptors}
+
+    def get_property(self, prop_descriptor: PropertyDescriptor):
+        property_name = prop_descriptor.name
+        assert property_name in self.prop_descriptors, \
+            f'Property {prop_descriptor} not found in the' \
+            ' property group {self.group_name}.'
+        return self.prop_descriptors.get(property_name)

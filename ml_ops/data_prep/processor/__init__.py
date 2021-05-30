@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from ml_ops.data_prep.processor.property import PropertyDescriptor, \
-    PropertyDescriptorBuilder
+    PropertyDescriptorBuilder, PropertyGroupDescriptor
 from typing import Dict, List, Union
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.session import SparkSession
@@ -36,7 +36,7 @@ class SparkProcessor(ABC):
         cls._types[cls.__name__] = cls
 
     @abstractmethod
-    def get_property_groups(self):
+    def get_property_groups(self) -> List[PropertyGroupDescriptor]:
         pass
 
     @abstractmethod
@@ -73,7 +73,6 @@ class TransformProcessor(SparkProcessor):
     VIEW_NAME = PropertyDescriptorBuilder() \
         .name('view_name') \
         .description('Temp view name of the dependency.') \
-        .property_group(SparkProcessor.DEFAULT_PROPS_GROUP) \
         .required(False) \
         .build()
 
@@ -93,36 +92,58 @@ class ProcessorContext:
 
     def __init__(self,
                  spark_session: SparkSession,
-                 property_groups: Dict = {},
+                 property_groups: PropertyGroup = None,
                  dependencies: List[Dependency] = []) -> None:
+        if property_groups is None:
+            property_groups = PropertyGroups()
+
         self.property_groups = property_groups
         self.dependencies = dependencies
         self.spark_session = spark_session
 
-    def set_property(self,
-                     property_descriptor: PropertyDescriptor,
-                     value):
-        property_group_name = property_descriptor.property_group
-        property_name = property_descriptor.name
-        if property_group_name not in self.property_groups:
-            self.property_groups[property_group_name] = {}
+    def set_property_group(
+            self,
+            property_group_descriptor: PropertyGroupDescriptor,
+            property_group: PropertyGroup):
+        self.property_groups.set_property_group(
+            property_group_descriptor, property_group)
 
-        property_group = self.property_groups[property_group_name]
-        property_group[property_name] = value
+    def get_property_group(
+            self,
+            property_group_descriptor: PropertyGroupDescriptor
+    ) -> PropertyGroup:
+        return self.property_groups.get_property_group(
+            property_group_descriptor)
+
+
+class PropertyGroup(dict):
+
+    def set_property(self,
+                     property: PropertyDescriptor,
+                     value):
+        self[property.name] = value
+
+    def get_property(self, property: PropertyDescriptor):
+        property_name = property.name
+        assert not property.required or property_name in self, \
+            f'Property {property_name} not found.'
+        return self.get(property_name)
+
+
+class PropertyGroups(dict):
 
     def set_property_group(self,
-                           property_group_name: str,
-                           property_group_value: dict):
-        self.property_groups[property_group_name] = property_group_value
+                           property_group_descriptor: PropertyGroupDescriptor,
+                           property_group: PropertyGroup):
+        property_group_name = property_group_descriptor.group_name
+        self[property_group_name] = property_group
 
-    def get_property_group(self,
-                           property_group):
-        return self.property_groups.get(property_group, {})
+    def get_property_group(
+            self,
+            property_group_descriptor: PropertyGroupDescriptor
+    ) -> PropertyGroup:
+        name = property_group_descriptor.group_name
+        assert name in self, \
+            f'Property group {name} not found!'
 
-    def get_property(self,
-                     property_descriptor: PropertyDescriptor):
-        property_group_name = property_descriptor.property_group
-        property_name = property_descriptor.name
-        property_dict = self.property_groups.get(property_group_name, {})
-        return property_dict.get(property_name,
-                                 property_descriptor.default_value)
+        return self[name]
