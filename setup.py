@@ -11,9 +11,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'flask==1.1.2',
     'pyspark>=2.4.5',
-    'flask-cors',
     'Click',
     'networkx',
     'jsonschema',
