@@ -1,13 +1,12 @@
+from pyspark.sql.types import StructType
 from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
     PropertyGroupDescriptor
 from pyspark.sql.dataframe import DataFrame
-from ml_ops.data_prep.processor import ActionProcessor, ProcessorContext, \
-    TransformProcessor
+from ml_ops.data_prep.processor import ActionProcessor, Dependency, \
+    ProcessorContext, TransformProcessor
 
 
 class LoadStreamProcessor(TransformProcessor):
-
-    LOAD_OPTIONS_GROUP = 'load_options'
 
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
@@ -20,11 +19,17 @@ class LoadStreamProcessor(TransformProcessor):
         .required(True) \
         .build()
 
+    SCHEMA = PropertyDescriptorBuilder() \
+        .name('schema') \
+        .required(True) \
+        .build()
+
     DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
         group_name='default',
         prop_descriptors=[
             PATH,
             FORMAT,
+            SCHEMA,
             TransformProcessor.VIEW_NAME
         ]
     )
@@ -38,21 +43,28 @@ class LoadStreamProcessor(TransformProcessor):
                 self.LOAD_OPTIONS_GROUP]
 
     def run(self,
-            processor_context: ProcessorContext) -> DataFrame:
+            processor_context: ProcessorContext) -> Dependency:
+        dependency_config = {}
 
         default_options = processor_context.get_property_group(
             self.DEFAULT_PROPS_GROUP)
         load_options = processor_context.get_property_group(
             self.LOAD_OPTIONS_GROUP)
 
-        path = default_options.get(self.PATH)
-        format = default_options.get(self.FORMAT)
+        view_name = default_options.get_property(self.VIEW_NAME)
+        if view_name is not None:
+            dependency_config['view_name'] = view_name
+
+        path = default_options.get_property(self.PATH)
+        format = default_options.get_property(self.FORMAT)
+        schema = default_options.get_property(self.SCHEMA)
+
+        struct_type = StructType.fromJson(schema)
 
         df = processor_context.spark_session.readStream.load(
-            path=path,
-            format=format,
-            **load_options)
-        return df
+            path=path, format=format, schema=struct_type, **load_options)
+
+        return Dependency(df, dependency_config)
 
 
 class WriteStreamProcessor(ActionProcessor):
@@ -71,7 +83,7 @@ class WriteStreamProcessor(ActionProcessor):
     MODE = PropertyDescriptorBuilder() \
         .name('mode') \
         .description('The mode of write.') \
-        .allowed_values(['overwrite', 'append', 'update']) \
+        .allowed_values(['append', 'complete', 'update']) \
         .default_value('append') \
         .required(False) \
         .build()

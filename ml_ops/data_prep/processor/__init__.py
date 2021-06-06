@@ -92,7 +92,7 @@ class ProcessorContext:
 
     def __init__(self,
                  spark_session: SparkSession,
-                 property_groups: PropertyGroup = None,
+                 property_groups: PropertyGroups = None,
                  dependencies: List[Dependency] = []) -> None:
         if property_groups is None:
             property_groups = PropertyGroups()
