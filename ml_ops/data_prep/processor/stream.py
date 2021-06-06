@@ -1,7 +1,6 @@
 from pyspark.sql.types import StructType
 from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
     PropertyGroupDescriptor
-from pyspark.sql.dataframe import DataFrame
 from ml_ops.data_prep.processor import ActionProcessor, Dependency, \
     ProcessorContext, TransformProcessor
 
