@@ -1,15 +1,20 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from ml_ops.data_prep.processor.property import PropertyDescriptor, \
-    PropertyDescriptorBuilder, PropertyGroupDescriptor
 from typing import Dict, List, Union
+
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.session import SparkSession
+
+from ml_ops.data_prep.processor.property import PropertyGroup, PropertyGroups
+from ml_ops.data_prep.processor.property import PropertyDescriptor, \
+    PropertyDescriptorBuilder, PropertyGroupDescriptor, PropertyGroup, \
+    PropertyGroups
 
 
 class Dependency:
 
-    def __init__(self, df: DataFrame, config: Dict = {}) -> None:
+    def __init__(self, df: DataFrame, config: Dict) -> None:
         self.df = df
         self.config = config
 
@@ -24,11 +29,11 @@ class SparkProcessor(ABC):
     DEFAULT_PROPS_GROUP = 'default'
 
     @staticmethod
-    def get_spark_processor(type: str) -> SparkProcessor:
-        assert type in SparkProcessor._types, \
+    def get_spark_processor(processor_type: str) -> SparkProcessor:
+        assert processor_type in SparkProcessor._types, \
             f'SparkProcessor implementation not found ' \
-            f'for {type}.'
-        return SparkProcessor._types.get(type)()
+            f'for {processor_type}.'
+        return SparkProcessor._types.get(processor_type)()
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
@@ -77,14 +82,14 @@ class TransformProcessor(SparkProcessor):
         .build()
 
     @abstractmethod
-    def run(self, processor_context, spark_session) -> Dependency:
+    def run(self, processor_context) -> Dependency:
         pass
 
 
 class ActionProcessor(SparkProcessor):
 
     @abstractmethod
-    def run(self, processor_context, spark_session) -> None:
+    def run(self, processor_context) -> None:
         pass
 
 
@@ -93,7 +98,7 @@ class ProcessorContext:
     def __init__(self,
                  spark_session: SparkSession,
                  property_groups: PropertyGroups = None,
-                 dependencies: List[Dependency] = []) -> None:
+                 dependencies: List[Dependency] = None) -> None:
         if property_groups is None:
             property_groups = PropertyGroups()
 
@@ -115,35 +120,3 @@ class ProcessorContext:
         return self.property_groups.get_property_group(
             property_group_descriptor)
 
-
-class PropertyGroup(dict):
-
-    def set_property(self,
-                     property: PropertyDescriptor,
-                     value):
-        self[property.name] = value
-
-    def get_property(self, property: PropertyDescriptor):
-        property_name = property.name
-        assert not property.required or property_name in self, \
-            f'Property {property_name} not found.'
-        return self.get(property_name)
-
-
-class PropertyGroups(dict):
-
-    def set_property_group(self,
-                           property_group_descriptor: PropertyGroupDescriptor,
-                           property_group: PropertyGroup):
-        property_group_name = property_group_descriptor.group_name
-        self[property_group_name] = property_group
-
-    def get_property_group(
-            self,
-            property_group_descriptor: PropertyGroupDescriptor
-    ) -> PropertyGroup:
-        name = property_group_descriptor.group_name
-        assert name in self, \
-            f'Property group {name} not found!'
-
-        return self[name]

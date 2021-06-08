@@ -1,12 +1,14 @@
 from pyspark.sql.types import StructType
-from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
-    PropertyGroupDescriptor
+
 from ml_ops.data_prep.processor import ActionProcessor, Dependency, \
     ProcessorContext, TransformProcessor
+from ml_ops.data_prep.processor.configuration_constaints import TRIGGER_TYPES, \
+    ONCE_TRIGGER_TYPE
+from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
+    PropertyGroupDescriptor, get_boolean_value
 
 
 class LoadStreamProcessor(TransformProcessor):
-
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -55,19 +57,18 @@ class LoadStreamProcessor(TransformProcessor):
             dependency_config['view_name'] = view_name
 
         path = default_options.get_property(self.PATH)
-        format = default_options.get_property(self.FORMAT)
+        load_format = default_options.get_property(self.FORMAT)
         schema = default_options.get_property(self.SCHEMA)
 
         struct_type = StructType.fromJson(schema)
 
         df = processor_context.spark_session.readStream.load(
-            path=path, format=format, schema=struct_type, **load_options)
+            path=path, format=load_format, schema=struct_type, **load_options)
 
         return Dependency(df, dependency_config)
 
 
 class WriteStreamProcessor(ActionProcessor):
-
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -97,12 +98,17 @@ class WriteStreamProcessor(ActionProcessor):
     TRIGGER_TYPE = PropertyDescriptorBuilder() \
         .name('trigger_type') \
         .description('The type of trigger.') \
-        .allowed_values(['processingTime', 'once', 'continuous']) \
-        .default_value('processingTime')
+        .required(False) \
+        .allowed_values(TRIGGER_TYPES) \
+        .default_value(ONCE_TRIGGER_TYPE) \
+        .build()
 
     TRIGGER_VALUE = PropertyDescriptorBuilder() \
         .name('trigger_value') \
-        .description('The value that has to be set to the trigger.')
+        .description('The value that has to be set to the trigger.') \
+        .required(False) \
+        .default_value('true') \
+        .build()
 
     DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
         group_name='default',
@@ -126,7 +132,6 @@ class WriteStreamProcessor(ActionProcessor):
 
     def run(self,
             processor_context: ProcessorContext) -> None:
-
         default_options = processor_context.get_property_group(
             self.DEFAULT_PROPS_GROUP
         )
@@ -136,11 +141,15 @@ class WriteStreamProcessor(ActionProcessor):
         )
 
         path = default_options.get_property(self.PATH)
-        format = default_options.get_property(self.FORMAT)
+        write_format = default_options.get_property(self.FORMAT)
         mode = default_options.get_property(self.MODE)
         partition_by = default_options.get_property(self.PARTITION_BY)
-        trigger_type = default_options.get_property(self.TRIGGER_TYPE)
-        trigger_value = default_options.get_property(self.TRIGGER_VALUE)
+        trigger_type = default_options.get_property(
+            self.TRIGGER_TYPE, self.TRIGGER_TYPE.default_value)
+        trigger_value = default_options.get_property(
+            self.TRIGGER_VALUE, self.TRIGGER_VALUE.default_value)
+        if trigger_type == ONCE_TRIGGER_TYPE:
+            trigger_value = get_boolean_value(trigger_value, True)
 
         source_df = processor_context.dependencies[0].df
 
@@ -152,7 +161,8 @@ class WriteStreamProcessor(ActionProcessor):
             .writeStream \
             .trigger(**trigger_params) \
             .start(path=path,
-                   format=format,
+                   format=write_format,
                    outputMode=mode,
-                   partitionBy=partition_by
-                   ** write_options)
+                   partitionBy=partition_by,
+                   **write_options) \
+            .awaitTermination()

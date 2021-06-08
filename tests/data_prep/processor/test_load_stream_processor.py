@@ -66,8 +66,6 @@ def test_load_stream_processor(spark_session: SparkSession):
     output = processor.run(processor_context)
     output_dir = f'{TEST_DIR}/stream_output'
     output.df.createOrReplaceTempView('input')
-    # spark_session.sql('select count(*) from input').writeStream.trigger(
-    #     once=True).start(format='console', outputMode='complete')
     output.df.writeStream.trigger(once=True) \
         .start(path=output_dir,
                format='csv',
