@@ -95,7 +95,8 @@ class SQLProcessor(TransformProcessor):
 
         spark = processor_context.spark_session
         df = spark.sql(default_options.get_property(self.QUERY))
-        return Dependency(df)
+        dependency_config = {}
+        return Dependency(df, dependency_config)
 
 
 class WriteProcessor(ActionProcessor):
