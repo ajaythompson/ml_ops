@@ -1,5 +1,6 @@
+import textwrap
 from abc import ABC
-from typing import List
+from typing import List, Union
 
 
 class PropertyDescriptor:
@@ -17,6 +18,15 @@ class PropertyDescriptor:
         self.allowed_values = allowed_values
         self.default_value = default_value
         self.validators = validators
+
+    def __str__(self) -> str:
+        return textwrap.dedent(f'''
+        name: {self.name}
+        description: {self.description}
+        required: {self.required}
+        allowed_values: {self.allowed_values}
+        default_value: {self.default_value}
+        ''')
 
 
 class PropertyDescriptorBuilder:
@@ -64,6 +74,10 @@ class PropertyDescriptorBuilder:
         )
 
 
+class PropertyException(Exception):
+    pass
+
+
 class PropertyGroupDescriptor(ABC):
 
     def __init__(self, group_name,
@@ -78,3 +92,49 @@ class PropertyGroupDescriptor(ABC):
             f'Property {prop_descriptor} not found in the' \
             ' property group {self.group_name}.'
         return self.prop_descriptors.get(property_name)
+
+
+class PropertyGroup(dict):
+
+    def set_property(self,
+                     property_descriptor: PropertyDescriptor,
+                     value):
+        self[property_descriptor.name] = value
+
+    def get_property(self,
+                     property_descriptor: PropertyDescriptor,
+                     default=None):
+        property_name = property_descriptor.name
+        if property_descriptor.required and property_name not in self:
+            textwrap.dedent(f'''Property not found.
+                            {property_descriptor}
+                            ''')
+        return self.get(property_name, default)
+
+
+class PropertyGroups(dict):
+
+    def set_property_group(self,
+                           property_group_descriptor: PropertyGroupDescriptor,
+                           property_group: Union[PropertyGroup, dict]):
+        property_group_name = property_group_descriptor.group_name
+        self[property_group_name] = property_group
+
+    def get_property_group(
+        self,
+        property_group_descriptor: PropertyGroupDescriptor
+    ) -> PropertyGroup:
+        name = property_group_descriptor.group_name
+        assert name in self, \
+            f'Property group {name} not found!'
+
+        return self[name]
+
+
+def get_boolean_value(string_value: str, default: bool) -> bool:
+    if string_value.lower() in ['yes', 'true', 'y']:
+        return True
+    elif string_value.lower() in ['no', 'false', 'n']:
+        return False
+    else:
+        return default
