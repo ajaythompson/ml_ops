@@ -1,13 +1,21 @@
+from __future__ import annotations
+
+import json
+import uuid
 from abc import ABC, abstractmethod
 from typing import Union
 
-from pyspark.sql.session import SparkSession
-from ml_ops.data_prep.processor import ProcessorContext
-from ml_ops.data_prep.processor import Dependency, SparkProcessor
 import networkx as nx
 from networkx.classes.digraph import DiGraph
-import json
-import uuid
+from pyspark.sql.session import SparkSession
+
+from ml_ops.data_prep.processor import Dependency, SparkProcessor, \
+    PropertyGroups, PropertyGroup
+from ml_ops.data_prep.processor import ProcessorContext
+
+
+class WorkflowConfigException(Exception):
+    pass
 
 
 class WFProcessor:
@@ -15,27 +23,146 @@ class WFProcessor:
     def __init__(self,
                  name,
                  type,
-                 property_groups):
-        self.id = str(uuid.uuid1())
+                 property_groups,
+                 id=None):
+        if id is None:
+            self.id = str(uuid.uuid1())
+        self.id = id
         self.name = name
         self.type = type
         self.property_groups = property_groups
 
+    def json_value(self):
+        json_value = {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'property_groups': self.property_groups
+        }
+        return json_value
+
+    @classmethod
+    def get_processor(cls, config: dict) -> WFProcessor:
+        processor_id = config.get('id')
+        name = config.get('name', '')
+        type = config.get('type')
+        property_groups_config = config.get('property_groups', {})
+
+        if processor_id is None:
+            raise WorkflowConfigException(f'Missing processor id in config.')
+
+        if type is None:
+            raise WorkflowConfigException(
+                'Missing processor type in processor',
+                f' config with id {processor_id}.'
+            )
+
+        property_groups = PropertyGroups()
+
+        for group_name, group_properties in property_groups_config.items():
+            property_group = PropertyGroup()
+            for property_name, property_value in group_properties.items():
+                property_group[property_name] = property_value
+
+            property_groups[group_name] = property_group
+
+        return WFProcessor(
+            name=name,
+            type=type,
+            property_groups=property_groups,
+            id=processor_id
+        )
+
 
 class WFRelation:
 
-    def __init__(self, left, right) -> None:
-        self.id = str(uuid.uuid1())
+    def __init__(self, left, right, id=None) -> None:
+        if id is None:
+            self.id = str(uuid.uuid1())
+        self.id = id
         self.left = left
         self.right = right
+
+    def json_value(self):
+        json_value = {
+            'id': self.id,
+            'left': self.left,
+            'right': self.right
+        }
+        return json_value
+
+    @classmethod
+    def get_relation(cls, config: dict) -> WFRelation:
+        relation_id = config.get('id')
+        left = config.get('left')
+        right = config.get('right')
+
+        if relation_id is None:
+            raise WorkflowConfigException(f'Missing relation id in config.')
+
+        if left is None:
+            raise WorkflowConfigException(
+                f'Missing left relation id in config.'
+                f'for the relation {relation_id}.')
+
+        if right is None:
+            raise WorkflowConfigException(
+                f'Missing right relation id in config.'
+                f'for the relation {relation_id}.')
+
+        return WFRelation(left, right, relation_id)
 
 
 class Workflow:
 
-    def __init__(self) -> None:
-        self.id = str(uuid.uuid1())
-        self.processors = {}
-        self.relations = {}
+    def __init__(self, id=None, processors=None, relations=None) -> None:
+        if id is None:
+            id = str(uuid.uuid1())
+
+        if processors is None:
+            processors = {}
+
+        if relations is None:
+            relations = {}
+
+        self.id = id
+        self.processors = processors
+        self.relations = relations
+
+    @classmethod
+    def get_workflow(cls, config: dict) -> Workflow:
+        workflow_id = config.get('id')
+        if workflow_id is None:
+            raise WorkflowConfigException(f'Missing workflow id in config.')
+        processors = config.get('processors', [])
+        relations = config.get('relations', [])
+
+        processor_list = [WFProcessor.get_processor(processor_config) for
+                          processor_config in processors]
+        relation_list = [WFRelation.get_relation(relation_config) for
+                         relation_config in relations]
+
+        processor_dict = {processor.id: processor
+                          for processor in processor_list}
+        relation_dict = {relation.id: relation
+                         for relation in relation_list}
+
+        return Workflow(id, processor_dict, relation_dict)
+
+    def json_value(self):
+
+        json_processors = [processor.json_value()
+                           for processor in self.processors.values()]
+
+        json_relations = [relation.json_value()
+                          for relation in self.relations.values()]
+
+        json_value = {
+            'id': self.id,
+            'processors': json_processors,
+            'relations': json_relations
+        }
+        return json_value
 
     def add_processor(self, wf_processor: WFProcessor):
         self.processors[wf_processor.id] = wf_processor
@@ -54,13 +181,13 @@ class Workflow:
         return self.relations.get(relation_id)
 
     def update_processor(self, processor_id, wf_processor: WFProcessor):
-        wf_processor.id(processor_id)
-        self.processors.update(processor_id, wf_processor)
+        wf_processor.id = processor_id
+        self.processors[processor_id] = wf_processor
         return self
 
     def update_relation(self, relation_id, wf_relation: WFRelation):
-        wf_relation.id(wf_relation)
-        self.relations.update(relation_id, wf_relation)
+        wf_relation.id = wf_relation
+        self.processors[relation_id] = wf_relation
         return self
 
     def remove_processor(self, processor_id):
@@ -83,7 +210,7 @@ class Workflow:
 
 class WorkflowRepository(ABC):
 
-    @ abstractmethod
+    @abstractmethod
     def create_workflow(self) -> Workflow:
         """Adds a new workflow.
 
@@ -92,7 +219,7 @@ class WorkflowRepository(ABC):
         """
         pass
 
-    @ abstractmethod
+    @abstractmethod
     def read_workflow(self, id: str) -> Workflow:
         """Fetch the workflow for the given id.
 
@@ -104,7 +231,7 @@ class WorkflowRepository(ABC):
         """
         pass
 
-    @ abstractmethod
+    @abstractmethod
     def update_workflow(self, id: str, workflow: Workflow) -> Workflow:
         """Updates the id with the given workflow.
 
@@ -117,7 +244,7 @@ class WorkflowRepository(ABC):
         """
         pass
 
-    @ abstractmethod
+    @abstractmethod
     def delete_workflow(self, id: str) -> None:
         """Delete the workflow for the given id.
 
@@ -139,7 +266,8 @@ class InMemoryWFRepository(WorkflowRepository, dict):
         return self.get(id)
 
     def update_workflow(self, id: str, workflow: Workflow) -> Workflow:
-        self.update(id, workflow)
+        workflow.id = id
+        self[id] = workflow
         return self.read_workflow(id)
 
     def delete_workflow(self, id: str) -> None:
