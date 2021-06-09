@@ -2,8 +2,8 @@ from pyspark.sql.types import StructType
 
 from ml_ops.data_prep.processor import ActionProcessor, Dependency, \
     ProcessorContext, TransformProcessor
-from ml_ops.data_prep.processor.configuration_constaints import TRIGGER_TYPES, \
-    ONCE_TRIGGER_TYPE
+from ml_ops.data_prep.processor.configuration_constaints \
+    import TRIGGER_TYPES, ONCE_TRIGGER_TYPE
 from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
     PropertyGroupDescriptor, get_boolean_value
 
