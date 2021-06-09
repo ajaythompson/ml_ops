@@ -26,7 +26,7 @@ class WFProcessor:
                  property_groups,
                  id=None):
         if id is None:
-            self.id = str(uuid.uuid1())
+            id = str(uuid.uuid1())
         self.id = id
         self.name = name
         self.type = type
@@ -78,7 +78,7 @@ class WFRelation:
 
     def __init__(self, left, right, id=None) -> None:
         if id is None:
-            self.id = str(uuid.uuid1())
+            id = str(uuid.uuid1())
         self.id = id
         self.left = left
         self.right = right
