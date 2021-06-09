@@ -1,7 +1,7 @@
 from ml_ops.data_prep.processor.batch import LoadProcessor, \
     SQLProcessor, WriteProcessor
 from ml_ops.data_prep.workflow import InMemoryWFRepository, \
-    WFProcessor, WFRelation
+    WFProcessor, WFRelation, Workflow
 from ml_ops.data_prep.workflow import SparkWorkflowManager
 from ml_ops.data_prep.processor import PropertyGroup, PropertyGroups
 from pyspark.conf import SparkConf
@@ -9,6 +9,7 @@ from pyspark.sql.session import SparkSession
 import pytest
 import os
 import shutil
+import json
 
 FIXTURE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
@@ -177,6 +178,35 @@ def test_workflow_multi_processor(spark: SparkSession):
     wf_manager.run(workflow_id=workflow.id,
                    spark=spark,
                    processor_id=write_enriched_data.id)
+
+    actual = spark.read.format('csv').options(**csv_options) \
+        .load(f'{TEST_DIR}/enriched_employee') \
+        .collect()
+
+    expected = spark.read.format('csv').options(**csv_options) \
+        .load(f'{FIXTURE_DIR}/enriched_employee_output.csv') \
+        .collect()
+
+    assert actual == expected
+
+
+def test_workflow_serializer(spark: SparkSession):
+
+    csv_options = {
+        'header': 'true'
+    }
+
+    with open(f'{FIXTURE_DIR}/workflow.json') as f:
+        content = f.read().replace('##FIXTURE_DIR##', FIXTURE_DIR)
+        workflow_config = json.loads(content)
+
+    workflow = Workflow.get_workflow(workflow_config)
+
+    wf_repo = InMemoryWFRepository()
+    wf_manager = SparkWorkflowManager(wf_repo)
+
+    wf_repo.update_workflow(workflow.id, workflow)
+    wf_manager.run(workflow.id, spark)
 
     actual = spark.read.format('csv').options(**csv_options) \
         .load(f'{TEST_DIR}/enriched_employee') \

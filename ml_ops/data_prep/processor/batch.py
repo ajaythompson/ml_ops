@@ -77,7 +77,7 @@ class SQLProcessor(TransformProcessor):
         ]
     )
 
-    def get_property_groups(self) -> List[PropertyDescriptor]:
+    def get_property_groups(self) -> List[PropertyGroupDescriptor]:
         return [self.DEFAULT_PROPS_GROUP]
 
     def run(self,
