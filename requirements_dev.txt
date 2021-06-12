@@ -8,7 +8,13 @@ coverage
 Sphinx
 twine
 Click
-pytest
-pytest-runner
+flaky
 autopep8
 pylama
+
+pytest
+pytest-runner
+pytest-testmon
+pytest-xdist
+pytest-benchmark
+pytest-cov
