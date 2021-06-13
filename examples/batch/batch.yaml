@@ -5,7 +5,7 @@ processors:
     type: LoadProcessor
     property_groups:
       default:
-        path: "example/outlier-detection/input/sensor.csv"
+        path: "examples/batch/input/sensor.csv"
         format: csv
         view_name: sensor_data
       load_options:
@@ -34,7 +34,7 @@ processors:
     type: WriteProcessor
     property_groups:
       default:
-        path: "example/outlier-detection/output"
+        path: "examples/batch/output"
         format: csv
       write_options:
         header: "true"
