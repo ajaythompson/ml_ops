@@ -1,3 +1,5 @@
+import json
+
 from ml_ops.data_prep.processor.stream import LoadStreamProcessor
 from ml_ops.data_prep.processor import ProcessorContext, PropertyGroup, \
     PropertyGroups
@@ -50,7 +52,7 @@ def test_load_stream_processor(spark_session: SparkSession):
                                f'{FIXTURE_DIR}/sample_load.csv')
     default_props.set_property(LoadStreamProcessor.FORMAT, 'csv')
     default_props.set_property(LoadStreamProcessor.SCHEMA,
-                               schema)
+                               json.dumps(schema))
 
     property_groups = PropertyGroups()
     property_groups.set_property_group(
