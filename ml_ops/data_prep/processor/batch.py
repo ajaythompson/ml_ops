@@ -1,6 +1,6 @@
 from typing import List
-from ml_ops.data_prep.processor.property import PropertyDescriptor, \
-    PropertyDescriptorBuilder, PropertyGroupDescriptor
+from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
+    PropertyGroupDescriptor
 from ml_ops.data_prep.processor import ActionProcessor, Dependency
 from ml_ops.data_prep.processor import ProcessorContext
 from ml_ops.data_prep.processor import TransformProcessor
@@ -57,7 +57,6 @@ class LoadProcessor(TransformProcessor):
 
         spark_session = processor_context.spark_session
         df = spark_session.read.load(path=path, format=format, **load_options)
-
         return Dependency(df, dependency_config)
 
 
@@ -94,8 +93,13 @@ class SQLProcessor(TransformProcessor):
             self.DEFAULT_PROPS_GROUP)
 
         spark = processor_context.spark_session
-        df = spark.sql(default_options.get_property(self.QUERY))
+        query = default_options.get_property(self.QUERY)
+        processor_context.get_logger().info(f'Executing query {query}.')
+        df = spark.sql(query)
         dependency_config = {}
+        view_name = default_options.get_property(self.VIEW_NAME)
+        if view_name is not None:
+            dependency_config['view_name'] = view_name
         return Dependency(df, dependency_config)
 
 

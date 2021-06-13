@@ -120,3 +120,6 @@ class ProcessorContext:
         return self.property_groups.get_property_group(
             property_group_descriptor)
 
+    def get_logger(self):
+        log4j = self.spark_session._jvm.org.apache.log4j.Logger
+        return log4j.getLogger(self.__class__.__name__)
