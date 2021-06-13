@@ -1,3 +1,5 @@
+import json
+
 from pyspark.sql.types import StructType
 
 from ml_ops.data_prep.processor import ActionProcessor, Dependency, \
@@ -45,6 +47,9 @@ class LoadStreamProcessor(TransformProcessor):
 
     def run(self,
             processor_context: ProcessorContext) -> Dependency:
+
+        logger = processor_context.get_logger()
+
         dependency_config = {}
 
         default_options = processor_context.get_property_group(
@@ -60,7 +65,9 @@ class LoadStreamProcessor(TransformProcessor):
         load_format = default_options.get_property(self.FORMAT)
         schema = default_options.get_property(self.SCHEMA)
 
-        struct_type = StructType.fromJson(schema)
+        json_schema = json.loads(schema)
+        logger.info(f'Reading data using schema {json_schema}.')
+        struct_type = StructType.fromJson(json_schema)
 
         df = processor_context.spark_session.readStream.load(
             path=path, format=load_format, schema=struct_type, **load_options)
