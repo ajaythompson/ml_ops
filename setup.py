@@ -39,6 +39,7 @@ setup(
     entry_points={
         'console_scripts': [
             'ml_ops=ml_ops.cli:main',
+            'run-workflow=ml_ops.cli:run_workflow'
         ],
     },
     install_requires=requirements,
