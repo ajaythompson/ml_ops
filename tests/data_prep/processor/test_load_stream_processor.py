@@ -1,14 +1,13 @@
 import json
-
-from ml_ops.data_prep.processor.stream import LoadStreamProcessor
-from ml_ops.data_prep.processor import ProcessorContext, PropertyGroup, \
-    PropertyGroups
 import os
 import shutil
 
 import pytest
 from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
+
+from ml_ops.processor import ProcessorContext, PropertyGroup, PropertyGroups
+from ml_ops.processor.stream import LoadStreamProcessor
 
 FIXTURE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),

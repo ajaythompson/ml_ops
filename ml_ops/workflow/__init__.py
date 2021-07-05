@@ -9,9 +9,9 @@ import networkx as nx
 from networkx.classes.digraph import DiGraph
 from pyspark.sql.session import SparkSession
 
-from ml_ops.data_prep.processor import Dependency, SparkProcessor, \
+from ml_ops.processor import Dependency, SparkProcessor, \
     PropertyGroups, PropertyGroup
-from ml_ops.data_prep.processor import ProcessorContext
+from ml_ops.processor import ProcessorContext
 
 
 class WorkflowConfigException(Exception):

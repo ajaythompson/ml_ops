@@ -1,16 +1,16 @@
-from typing import List
-from ml_ops.data_prep.processor.property import PropertyDescriptorBuilder, \
-    PropertyGroupDescriptor
-from ml_ops.data_prep.processor import ActionProcessor, Dependency
-from ml_ops.data_prep.processor import ProcessorContext
-from ml_ops.data_prep.processor import TransformProcessor
+import json
+
+from pyspark.sql.types import StructType
+
+from ml_ops.processor import ActionProcessor, Dependency, \
+    ProcessorContext, TransformProcessor
+from ml_ops.processor.configuration_constants import TRIGGER_TYPES,\
+    ONCE_TRIGGER_TYPE
+from ml_ops.processor.property import PropertyDescriptorBuilder, \
+    PropertyGroupDescriptor, get_boolean_value
 
 
-class LoadProcessor(TransformProcessor):
-
-    LOAD_OPTIONS_GROUP = 'load_options'
-    description = 'Processor to read datasource into a dataframe.'
-
+class LoadStreamProcessor(TransformProcessor):
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -22,11 +22,17 @@ class LoadProcessor(TransformProcessor):
         .required(True) \
         .build()
 
+    SCHEMA = PropertyDescriptorBuilder() \
+        .name('schema') \
+        .required(True) \
+        .build()
+
     DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
         group_name='default',
         prop_descriptors=[
             PATH,
             FORMAT,
+            SCHEMA,
             TransformProcessor.VIEW_NAME
         ]
     )
@@ -41,6 +47,9 @@ class LoadProcessor(TransformProcessor):
 
     def run(self,
             processor_context: ProcessorContext) -> Dependency:
+
+        logger = processor_context.get_logger()
+
         dependency_config = {}
 
         default_options = processor_context.get_property_group(
@@ -53,58 +62,20 @@ class LoadProcessor(TransformProcessor):
             dependency_config['view_name'] = view_name
 
         path = default_options.get_property(self.PATH)
-        format = default_options.get_property(self.FORMAT)
+        load_format = default_options.get_property(self.FORMAT)
+        schema = default_options.get_property(self.SCHEMA)
 
-        spark_session = processor_context.spark_session
-        df = spark_session.read.load(path=path, format=format, **load_options)
+        json_schema = json.loads(schema)
+        logger.info(f'Reading data using schema {json_schema}.')
+        struct_type = StructType.fromJson(json_schema)
+
+        df = processor_context.spark_session.readStream.load(
+            path=path, format=load_format, schema=struct_type, **load_options)
+
         return Dependency(df, dependency_config)
 
 
-class SQLProcessor(TransformProcessor):
-
-    QUERY = PropertyDescriptorBuilder() \
-        .name('query') \
-        .description('query to be executed.') \
-        .required(True) \
-        .build()
-
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            QUERY,
-            TransformProcessor.VIEW_NAME
-        ]
-    )
-
-    def get_property_groups(self) -> List[PropertyGroupDescriptor]:
-        return [self.DEFAULT_PROPS_GROUP]
-
-    def run(self,
-            processor_context: ProcessorContext) -> Dependency:
-
-        for dependency in processor_context.dependencies:
-            assert 'view_name' in dependency.config, \
-                'Missing view_name in dependency.'
-            view_name = dependency.config['view_name']
-            df = dependency.df
-            df.createOrReplaceTempView(view_name)
-
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP)
-
-        spark = processor_context.spark_session
-        query = default_options.get_property(self.QUERY)
-        processor_context.get_logger().info(f'Executing query {query}.')
-        df = spark.sql(query)
-        dependency_config = {}
-        view_name = default_options.get_property(self.VIEW_NAME)
-        if view_name is not None:
-            dependency_config['view_name'] = view_name
-        return Dependency(df, dependency_config)
-
-
-class WriteProcessor(ActionProcessor):
-
+class WriteStreamProcessor(ActionProcessor):
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -119,7 +90,7 @@ class WriteProcessor(ActionProcessor):
     MODE = PropertyDescriptorBuilder() \
         .name('mode') \
         .description('The mode of write.') \
-        .allowed_values(['overwrite', 'append']) \
+        .allowed_values(['append', 'complete', 'update']) \
         .default_value('append') \
         .required(False) \
         .build()
@@ -131,13 +102,30 @@ class WriteProcessor(ActionProcessor):
         .required(False) \
         .build()
 
+    TRIGGER_TYPE = PropertyDescriptorBuilder() \
+        .name('trigger_type') \
+        .description('The type of trigger.') \
+        .required(False) \
+        .allowed_values(TRIGGER_TYPES) \
+        .default_value(ONCE_TRIGGER_TYPE) \
+        .build()
+
+    TRIGGER_VALUE = PropertyDescriptorBuilder() \
+        .name('trigger_value') \
+        .description('The value that has to be set to the trigger.') \
+        .required(False) \
+        .default_value('true') \
+        .build()
+
     DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
         group_name='default',
         prop_descriptors=[
             PATH,
             FORMAT,
             MODE,
-            PARTITION_BY
+            PARTITION_BY,
+            TRIGGER_TYPE,
+            TRIGGER_VALUE
         ]
     )
 
@@ -145,15 +133,12 @@ class WriteProcessor(ActionProcessor):
         group_name='write_options'
     )
 
-    description = 'Processor to write dataframe.'
-
     def get_property_groups(self):
         return [self.DEFAULT_PROPS_GROUP,
                 self.WRITE_OPTIONS_GROUP]
 
     def run(self,
             processor_context: ProcessorContext) -> None:
-
         default_options = processor_context.get_property_group(
             self.DEFAULT_PROPS_GROUP
         )
@@ -163,12 +148,28 @@ class WriteProcessor(ActionProcessor):
         )
 
         path = default_options.get_property(self.PATH)
-        format = default_options.get_property(self.FORMAT)
+        write_format = default_options.get_property(self.FORMAT)
         mode = default_options.get_property(self.MODE)
         partition_by = default_options.get_property(self.PARTITION_BY)
+        trigger_type = default_options.get_property(
+            self.TRIGGER_TYPE, self.TRIGGER_TYPE.default_value)
+        trigger_value = default_options.get_property(
+            self.TRIGGER_VALUE, self.TRIGGER_VALUE.default_value)
+        if trigger_type == ONCE_TRIGGER_TYPE:
+            trigger_value = get_boolean_value(trigger_value, True)
 
         source_df = processor_context.dependencies[0].df
 
-        source_df.write.save(path=path, format=format,
-                             mode=mode, partitionBy=partition_by,
-                             **write_options)
+        trigger_params = {trigger_type: trigger_value}
+
+        # TODO check query name
+
+        source_df \
+            .writeStream \
+            .trigger(**trigger_params) \
+            .start(path=path,
+                   format=write_format,
+                   outputMode=mode,
+                   partitionBy=partition_by,
+                   **write_options) \
+            .awaitTermination()

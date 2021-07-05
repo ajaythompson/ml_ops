@@ -1,10 +1,12 @@
+import os
+
+import pytest
 from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
-from ml_ops.data_prep.processor import ProcessorContext, \
-    PropertyGroup, PropertyGroups
-from ml_ops.data_prep.processor.batch import LoadProcessor
-import pytest
-import os
+
+from ml_ops.processor import ProcessorContext
+from ml_ops.processor.batch import LoadProcessor
+from ml_ops.processor.property import PropertyGroup, PropertyGroups
 
 FIXTURE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
