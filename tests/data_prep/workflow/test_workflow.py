@@ -1,9 +1,8 @@
-from ml_ops.data_prep.processor.batch import LoadProcessor, \
-    SQLProcessor, WriteProcessor
-from ml_ops.data_prep.workflow import InMemoryWFRepository, \
+from ml_ops.processor.batch import LoadProcessor, SQLProcessor, WriteProcessor
+from ml_ops.workflow import InMemoryWFRepository, \
     WFProcessor, WFRelation, Workflow
-from ml_ops.data_prep.workflow import SparkWorkflowManager
-from ml_ops.data_prep.processor import PropertyGroup, PropertyGroups
+from ml_ops.workflow import SparkWorkflowManager
+from ml_ops.processor import PropertyGroup, PropertyGroups
 from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
 import pytest

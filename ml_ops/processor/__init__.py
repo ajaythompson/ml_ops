@@ -6,10 +6,8 @@ from typing import Dict, List, Union
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.session import SparkSession
 
-from ml_ops.data_prep.processor.property import PropertyGroup, PropertyGroups
-from ml_ops.data_prep.processor.property import PropertyDescriptor, \
-    PropertyDescriptorBuilder, PropertyGroupDescriptor, PropertyGroup, \
-    PropertyGroups
+from ml_ops.processor.property import PropertyDescriptorBuilder, \
+    PropertyGroupDescriptor, PropertyGroup, PropertyGroups
 
 
 class Dependency:

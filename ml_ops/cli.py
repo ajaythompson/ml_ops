@@ -1,6 +1,6 @@
 """Console script for ml_ops."""
 from pyspark.sql.session import SparkSession
-from ml_ops.data_prep.workflow import InMemoryWFRepository, \
+from ml_ops.workflow import InMemoryWFRepository, \
     SparkWorkflowManager, Workflow
 import sys
 

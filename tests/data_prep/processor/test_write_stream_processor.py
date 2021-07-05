@@ -6,9 +6,9 @@ from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
 from pyspark.sql.types import StructType
 
-from ml_ops.data_prep.processor import ProcessorContext, PropertyGroup, \
-    PropertyGroups, Dependency
-from ml_ops.data_prep.processor.stream import WriteStreamProcessor
+from ml_ops.processor import ProcessorContext, PropertyGroup, PropertyGroups,\
+    Dependency
+from ml_ops.processor.stream import WriteStreamProcessor
 
 FIXTURE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
