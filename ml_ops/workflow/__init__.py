@@ -49,7 +49,7 @@ class WFProcessor:
         property_groups_config = config.get('property_groups', {})
 
         if processor_id is None:
-            raise WorkflowConfigException(f'Missing processor id in config.')
+            raise WorkflowConfigException('Missing processor id in config.')
 
         if type is None:
             raise WorkflowConfigException(
@@ -98,7 +98,7 @@ class WFRelation:
         right = config.get('right')
 
         if relation_id is None:
-            raise WorkflowConfigException(f'Missing relation id in config.')
+            raise WorkflowConfigException('Missing relation id in config.')
 
         if left is None:
             raise WorkflowConfigException(
@@ -133,7 +133,7 @@ class Workflow:
     def get_workflow(cls, config: dict) -> Workflow:
         workflow_id = config.get('id')
         if workflow_id is None:
-            raise WorkflowConfigException(f'Missing workflow id in config.')
+            raise WorkflowConfigException('Missing workflow id in config.')
         processors = config.get('processors', [])
         relations = config.get('relations', [])
 

@@ -33,8 +33,10 @@ def spark():
 def get_load_processor(name,
                        path,
                        format,
-                       options={},
+                       options=None,
                        view_name=None) -> WFProcessor:
+    if options is None:
+        options = {}
     default_options = PropertyGroup()
     default_options.set_property(LoadProcessor.PATH, path)
     default_options.set_property(LoadProcessor.FORMAT, format)
