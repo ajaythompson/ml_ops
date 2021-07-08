@@ -2,6 +2,8 @@
 
 """The setup script."""
 
+from typing import Dict, List
+
 from setuptools import setup, find_packages
 
 with open('README.rst') as readme_file:
@@ -21,6 +23,21 @@ requirements = [
 setup_requirements = ['pytest-runner', ]
 
 test_requirements = ['pytest>=3', ]
+
+EXTRAS_REQUIREMENTS: Dict[str, List[str]] = {}
+
+sklearn = [
+    'scikit-learn',
+    'pandas'
+]
+
+EXTRAS_REQUIREMENTS['sklearn'] = sklearn
+
+_all_requirements = list(
+    {req for extras_reqs in EXTRAS_REQUIREMENTS.values() for req in
+     extras_reqs})
+
+EXTRAS_REQUIREMENTS['all'] = _all_requirements
 
 setup(
     author="Ajay Thompson",
@@ -43,6 +60,7 @@ setup(
         ],
     },
     install_requires=requirements,
+    extras_require=EXTRAS_REQUIREMENTS,
     license="GNU General Public License v3",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
