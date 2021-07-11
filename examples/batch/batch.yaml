@@ -3,41 +3,35 @@ processors:
   - id: 41550f9b-c850-11eb-a55e-d90d76bdfe70
     name: load sensor data
     type: LoadProcessor
-    property_groups:
-      default:
+    properties:
         path: "examples/batch/input/sensor.csv"
         format: csv
         view_name: sensor_data
-      load_options:
-        header: True
+        read.header: True
   - id: 41550f9d-c850-11eb-a55e-d90d76bdfe70
     name: compute mean and stddev
     type: SQLProcessor
-    property_groups:
-      default:
+    properties:
         view_name: sensor_grouped_data
         query: SELECT sensor_id, mean(value) AS mean, stddev(value) AS stddev
-          FROM sensor_data
-          GROUP BY sensor_id
+            FROM sensor_data
+            GROUP BY sensor_id
   - id: 41550f9e-c850-11eb-a55e-d90d76bdfe70
     name: compute upper and lower limit
     type: SQLProcessor
-    property_groups:
-      default:
+    properties:
         view_name: final
         query: SELECT sensor_id, mean, stddev,
-          (mean + 3 * stddev) AS upper_limit,
-          (mean - 3 * stddev) AS lower_limit
-          FROM sensor_grouped_data
+            (mean + 3 * stddev) AS upper_limit,
+            (mean - 3 * stddev) AS lower_limit
+            FROM sensor_grouped_data
   - id: 41550f9f-c850-11eb-a55e-d90d76bdfe70
     name: write outliers data
     type: WriteProcessor
-    property_groups:
-      default:
+    properties:
         path: "examples/batch/output"
         format: csv
-      write_options:
-        header: "true"
+        write.header: True
 relations:
   - id: 41550f9f-c850-11eb-a55e-d90d76bdfe70
     left: 41550f9b-c850-11eb-a55e-d90d76bdfe70
@@ -48,3 +42,4 @@ relations:
   - id: 41550fa1-c850-11eb-a55e-d90d76bdfe70
     left: 41550f9e-c850-11eb-a55e-d90d76bdfe70
     right: 41550f9f-c850-11eb-a55e-d90d76bdfe70
+    relation: INPUT

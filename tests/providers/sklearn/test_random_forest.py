@@ -5,8 +5,7 @@ from pathlib import Path
 import pytest
 from pyspark.sql import SparkSession
 
-from ml_ops.processor import ProcessorContext, PropertyGroups, PropertyGroup, \
-    Dependency
+from ml_ops.processor import ProcessorContext, FlowDF
 from ml_ops.providers.sklearn.random_forest import Inference, Trainer
 
 FIXTURE_DIR = os.path.join(
@@ -25,19 +24,15 @@ def temp_dir():
 
 def test_random_forest_trainer(spark: SparkSession,
                                temp_dir: str):
-    trainer_property_group = PropertyGroup()
     features_cols = ['sepal.length',
                      'sepal.width',
                      'petal.length',
                      'petal.width']
-    trainer_property_group.set_property(Trainer.FEATURE_COLS,
-                                        ','.join(features_cols))
-    trainer_property_group.set_property(Trainer.TARGET_COL, 'variety')
 
-    trainer_property_groups = PropertyGroups()
-    trainer_property_groups.set_property_group(
-        Trainer.DEFAULT_PROPS_GROUP,
-        trainer_property_group)
+    trainer_processor_context = ProcessorContext(spark)
+    trainer_processor_context.set_property(Trainer.FEATURE_COLS,
+                                           ','.join(features_cols))
+    trainer_processor_context.set_property(Trainer.TARGET_COL, 'variety')
 
     csv_options = {
         'inferSchema': 'true',
@@ -47,37 +42,24 @@ def test_random_forest_trainer(spark: SparkSession,
     iris_data_path = f'{FIXTURE_DIR}/iris.csv'
     input_df = spark.read.format('csv').options(**csv_options) \
         .load(iris_data_path)
-    input_dependency = Dependency(df=input_df, config={})
+    input_flow_df = FlowDF(df=input_df, attributes={})
 
-    trainer_processor_context = ProcessorContext(
-        spark_session=spark,
-        property_groups=trainer_property_groups,
-        dependencies=[input_dependency])
+    trainer_processor_context.set_flow_df(Trainer.INPUT_RELATION,
+                                          input_flow_df)
+
     random_forest_trainer = Trainer()
     trainer_dep = random_forest_trainer.run(trainer_processor_context)
 
-    model_location = f'{temp_dir}/output'
-    trainer_dep.df.write.mode('overwrite').parquet(model_location)
+    model_flow_df = FlowDF(trainer_dep.df, {})
 
-    inference_property_group = PropertyGroup()
-    features_cols = ['sepal.length',
-                     'sepal.width',
-                     'petal.length',
-                     'petal.width']
-    inference_property_group.set_property(Inference.FEATURE_COLS,
-                                          ','.join(features_cols))
-    inference_property_group.set_property(Inference.MODEL_LOCATION,
-                                          model_location)
+    inference_processor_context = ProcessorContext(spark)
+    inference_processor_context.set_property(Inference.FEATURE_COLS,
+                                             ','.join(features_cols))
 
-    inference_property_groups = PropertyGroups()
-    inference_property_groups.set_property_group(
-        Inference.DEFAULT_PROPS_GROUP,
-        inference_property_group)
-
-    inference_processor_context = ProcessorContext(
-        spark_session=spark,
-        property_groups=inference_property_groups,
-        dependencies=[input_dependency])
+    inference_processor_context.set_flow_df(Inference.INPUT_RELATION,
+                                            input_flow_df)
+    inference_processor_context.set_flow_df(Inference.MODEL_RELATION,
+                                            model_flow_df)
 
     random_forest_inference = Inference()
     inference_dep = random_forest_inference.run(inference_processor_context)

@@ -5,54 +5,40 @@
             "id": "41550f9b-c850-11eb-a55e-d90d76bdfe70",
             "name": "load_employee",
             "type": "LoadProcessor",
-            "property_groups": {
-                "default": {
-                    "path": "##FIXTURE_DIR##/employee.csv",
-                    "format": "csv",
-                    "view_name": "employee"
-                },
-                "load_options": {
-                    "header": "true"
-                }
+            "properties": {
+                "path": "##FIXTURE_DIR##/employee.csv",
+                "format": "csv",
+                "view_name": "employee",
+                "read.header": "true"
             }
         },
         {
             "id": "41550f9c-c850-11eb-a55e-d90d76bdfe70",
             "name": "load_department",
             "type": "LoadProcessor",
-            "property_groups": {
-                "default": {
-                    "path": "##FIXTURE_DIR##/department.csv",
-                    "format": "csv",
-                    "view_name": "department"
-                },
-                "load_options": {
-                    "header": "true"
-                }
+            "properties": {
+                "path": "##FIXTURE_DIR##/department.csv",
+                "format": "csv",
+                "view_name": "department",
+                "read.header": "true"
             }
         },
         {
             "id": "41550f9d-c850-11eb-a55e-d90d76bdfe70",
             "name": "join_emp_dept",
             "type": "SQLProcessor",
-            "property_groups": {
-                "default": {
-                    "query": "SELECT emp_id, name, department.dept FROM employee JOIN department  ON employee.dept_id = department.dept_id WHERE emp_id='1'"
-                }
+            "properties": {
+                "query": "SELECT emp_id, name, department.dept FROM employee JOIN department  ON employee.dept_id = department.dept_id WHERE emp_id='1'"
             }
         },
         {
             "id": "41550f9e-c850-11eb-a55e-d90d76bdfe70",
             "name": "write_enriched_data",
             "type": "WriteProcessor",
-            "property_groups": {
-                "default": {
-                    "path": "##FIXTURE_DIR##/output/enriched_employee",
-                    "format": "csv"
-                },
-                "write_options": {
-                    "header": "true"
-                }
+            "properties": {
+                "path": "##FIXTURE_DIR##/output/enriched_employee",
+                "format": "csv",
+                "write.header": "true"
             }
         }
     ],
@@ -70,7 +56,8 @@
         {
             "id": "41550fa1-c850-11eb-a55e-d90d76bdfe70",
             "left": "41550f9d-c850-11eb-a55e-d90d76bdfe70",
-            "right": "41550f9e-c850-11eb-a55e-d90d76bdfe70"
+            "right": "41550f9e-c850-11eb-a55e-d90d76bdfe70",
+            "relation": "INPUT"
         }
     ]
 }

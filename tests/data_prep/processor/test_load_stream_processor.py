@@ -6,7 +6,7 @@ import pytest
 from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
 
-from ml_ops.processor import ProcessorContext, PropertyGroup, PropertyGroups
+from ml_ops.processor import ProcessorContext
 from ml_ops.processor.stream import LoadStreamProcessor
 
 FIXTURE_DIR = os.path.join(
@@ -46,22 +46,15 @@ def test_load_stream_processor(spark_session: SparkSession):
         'checkpointLocation': f'{TEST_DIR}/checkpoint'
     }
 
-    default_props = PropertyGroup()
-    default_props.set_property(LoadStreamProcessor.PATH,
-                               f'{FIXTURE_DIR}/sample_load.csv')
-    default_props.set_property(LoadStreamProcessor.FORMAT, 'csv')
-    default_props.set_property(LoadStreamProcessor.SCHEMA,
-                               json.dumps(schema))
+    processor_context = ProcessorContext(spark_session)
+    processor_context.set_property(LoadStreamProcessor.PATH,
+                                   f'{FIXTURE_DIR}/sample_load.csv')
+    processor_context.set_property(LoadStreamProcessor.FORMAT, 'csv')
+    processor_context.set_property(LoadStreamProcessor.SCHEMA,
+                                   json.dumps(schema))
 
-    property_groups = PropertyGroups()
-    property_groups.set_property_group(
-        LoadStreamProcessor.LOAD_OPTIONS_GROUP, load_options)
-    property_groups.set_property_group(
-        LoadStreamProcessor.DEFAULT_PROPS_GROUP, default_props
-    )
-
-    processor_context = ProcessorContext(
-        spark_session, property_groups=property_groups)
+    for key, value in load_options.items():
+        processor_context.set_dynamic_property(f'read.{key}', value)
 
     processor = LoadStreamProcessor()
     output = processor.run(processor_context)
