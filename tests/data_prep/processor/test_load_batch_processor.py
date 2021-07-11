@@ -6,7 +6,6 @@ from pyspark.sql.session import SparkSession
 
 from ml_ops.processor import ProcessorContext
 from ml_ops.processor.batch import LoadProcessor
-from ml_ops.processor.property import PropertyGroup, PropertyGroups
 
 FIXTURE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
@@ -30,24 +29,14 @@ def test_load_processor(spark_session: SparkSession):
         'header': 'true'
     }
 
-    default_props = PropertyGroup()
-    default_props.set_property(
-        LoadProcessor.PATH, f'{FIXTURE_DIR}/sample_load.csv')
-    default_props.set_property(LoadProcessor.FORMAT, 'csv')
-
-    property_groups = PropertyGroups()
-    property_groups.set_property_group(
-        LoadProcessor.LOAD_OPTIONS_GROUP, load_options)
-    property_groups.set_property_group(
-        LoadProcessor.DEFAULT_PROPS_GROUP, default_props
-    )
-
     processor_context = ProcessorContext(spark_session)
-    processor_context.set_property_group(
-        LoadProcessor.LOAD_OPTIONS_GROUP, load_options)
-    processor_context.set_property_group(
-        LoadProcessor.DEFAULT_PROPS_GROUP, default_props
-    )
+    processor_context.set_property(LoadProcessor.PATH,
+                                   f'{FIXTURE_DIR}/sample_load.csv')
+    processor_context.set_property(LoadProcessor.FORMAT, 'csv')
+
+    for key, value in load_options.items():
+        processor_context.set_dynamic_property(f'read.{key}', value)
+
     processor = LoadProcessor()
     output = processor.run(processor_context)
     actual = output.df.collect()

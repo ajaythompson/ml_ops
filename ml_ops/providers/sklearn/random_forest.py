@@ -1,13 +1,11 @@
 import pickle
-from typing import List
 
 from pyspark.sql.types import BinaryType, StringType, StructField, StructType
 from sklearn.ensemble import RandomForestClassifier
 
 from ml_ops.processor import ProcessorContext, \
-    TransformProcessor, Dependency
-from ml_ops.processor.property import PropertyDescriptorBuilder, \
-    PropertyGroupDescriptor
+    TransformProcessor, FlowDF, RelationDescriptor
+from ml_ops.processor.property import PropertyDescriptorBuilder
 
 MODEL_COLUMN_NAME = 'model'
 
@@ -32,33 +30,31 @@ class Trainer(TransformProcessor):
         .required(True) \
         .build()
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            N_ESTIMATORS,
-            FEATURE_COLS,
-            TARGET_COL
+    INPUT_RELATION = RelationDescriptor(name='INPUT')
+
+    def get_property_descriptors(self):
+        return [
+            self.N_ESTIMATORS,
+            self.FEATURE_COLS,
+            self.TARGET_COL,
         ]
-    )
 
-    def get_property_groups(self) -> List[PropertyGroupDescriptor]:
-        return [self.DEFAULT_PROPS_GROUP]
+    def get_relations(self):
+        return [self.INPUT_RELATION]
 
-    def run(self, processor_context: ProcessorContext) -> Dependency:
+    def run(self, processor_context: ProcessorContext) -> FlowDF:
         spark = processor_context.spark_session
-        dependency = processor_context.dependencies[0]
+        input = processor_context.get_flow_df(self.INPUT_RELATION)
 
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP)
-        n_estimators = default_options.get_property(
+        n_estimators = processor_context.get_property(
             self.N_ESTIMATORS,
             self.N_ESTIMATORS.default_value)
         n_estimators = int(n_estimators)
-        feature_cols = default_options.get_property(self.FEATURE_COLS).split(
+        feature_cols = processor_context.get_property(self.FEATURE_COLS).split(
             ',')
-        target_col = default_options.get_property(self.TARGET_COL)
+        target_col = processor_context.get_property(self.TARGET_COL)
 
-        input_df = dependency.df
+        input_df = input.df
 
         input_pdf = input_df.toPandas()
 
@@ -75,16 +71,11 @@ class Trainer(TransformProcessor):
 
         model_df = spark.createDataFrame(data, schema=data_schema)
         model_df.show()
-        dep = Dependency(model_df, {})
+        dep = FlowDF(model_df, {})
         return dep
 
 
 class Inference(TransformProcessor):
-    MODEL_LOCATION = PropertyDescriptorBuilder() \
-        .name('model_location') \
-        .description('Parquet file where model is available.') \
-        .required(True) \
-        .build()
 
     FEATURE_COLS = PropertyDescriptorBuilder() \
         .name('feature_cols') \
@@ -92,33 +83,34 @@ class Inference(TransformProcessor):
         .required(True) \
         .build()
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            MODEL_LOCATION,
-            FEATURE_COLS
+    INPUT_RELATION = RelationDescriptor(name='INPUT')
+    MODEL_RELATION = RelationDescriptor(name='MODEL')
+
+    def get_property_descriptors(self):
+        return [
+            self.FEATURE_COLS,
         ]
-    )
 
-    def get_property_groups(self) -> List[PropertyGroupDescriptor]:
-        return [self.DEFAULT_PROPS_GROUP]
+    def get_relations(self):
+        return [
+            self.INPUT_RELATION,
+            self.MODEL_RELATION,
+        ]
 
-    def run(self, processor_context: ProcessorContext) -> Dependency:
+    def run(self, processor_context: ProcessorContext) -> FlowDF:
         spark = processor_context.spark_session
-        dependency = processor_context.dependencies[0]
+        input_rel = processor_context.get_flow_df(self.INPUT_RELATION)
+        model = processor_context.get_flow_df(self.MODEL_RELATION)
 
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP)
-        feature_cols = default_options.get_property(self.FEATURE_COLS).split(
+        feature_cols = processor_context.get_property(self.FEATURE_COLS).split(
             ',')
-        model_location = default_options.get_property(self.MODEL_LOCATION)
 
-        model_df = spark.read.parquet(model_location).select(MODEL_COLUMN_NAME)
+        model_df = model.df.select('model')
         model_row = model_df.collect()[0]
         model_binary = model_row[0]
         model = pickle.loads(model_binary)
 
-        feature_df = dependency.df
+        feature_df = input_rel.df
         feature_pdf = feature_df.toPandas()
 
         output = model.predict(feature_pdf[feature_cols])
@@ -126,5 +118,5 @@ class Inference(TransformProcessor):
 
         output_df = spark.createDataFrame(output_list)
 
-        dep = Dependency(output_df, {})
+        dep = FlowDF(output_df, {})
         return dep

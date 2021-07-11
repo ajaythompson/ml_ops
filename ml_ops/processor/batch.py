@@ -1,16 +1,12 @@
 from typing import List
-from ml_ops.processor import PropertyDescriptorBuilder, \
-    PropertyGroupDescriptor
-from ml_ops.processor import ActionProcessor, Dependency
+
+from ml_ops.processor import ActionProcessor, FlowDF, RelationDescriptor
 from ml_ops.processor import ProcessorContext
+from ml_ops.processor import PropertyDescriptorBuilder
 from ml_ops.processor import TransformProcessor
 
 
 class LoadProcessor(TransformProcessor):
-
-    LOAD_OPTIONS_GROUP = 'load_options'
-    description = 'Processor to read datasource into a dataframe.'
-
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -22,85 +18,75 @@ class LoadProcessor(TransformProcessor):
         .required(True) \
         .build()
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            PATH,
-            FORMAT,
-            TransformProcessor.VIEW_NAME
+    def get_property_descriptors(self):
+        return [
+            self.PATH,
+            self.FORMAT
         ]
-    )
 
-    LOAD_OPTIONS_GROUP = PropertyGroupDescriptor(
-        group_name='load_options'
-    )
-
-    def get_property_groups(self):
-        return [self.DEFAULT_PROPS_GROUP,
-                self.LOAD_OPTIONS_GROUP]
+    def get_relations(self):
+        return []
 
     def run(self,
-            processor_context: ProcessorContext) -> Dependency:
+            processor_context: ProcessorContext) -> FlowDF:
         dependency_config = {}
 
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP)
-        load_options = processor_context.get_property_group(
-            self.LOAD_OPTIONS_GROUP)
-
-        view_name = default_options.get_property(self.VIEW_NAME)
+        view_name = processor_context.get_property(self.VIEW_NAME)
         if view_name is not None:
             dependency_config['view_name'] = view_name
 
-        path = default_options.get_property(self.PATH)
-        format = default_options.get_property(self.FORMAT)
+        path = processor_context.get_property(self.PATH)
+        load_format = processor_context.get_property(self.FORMAT)
+
+        load_options = {}
+
+        for key, value in processor_context.get_properties().items():
+            if key.startswith('read.'):
+                key = key.rsplit(sep='.', maxsplit=1)[1]
+
+                load_options[key] = value
 
         spark_session = processor_context.spark_session
-        df = spark_session.read.load(path=path, format=format, **load_options)
-        return Dependency(df, dependency_config)
+        df = spark_session.read.load(path=path,
+                                     format=load_format,
+                                     **load_options)
+        return FlowDF(df, dependency_config)
 
 
 class SQLProcessor(TransformProcessor):
-
     QUERY = PropertyDescriptorBuilder() \
         .name('query') \
         .description('query to be executed.') \
         .required(True) \
         .build()
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            QUERY,
-            TransformProcessor.VIEW_NAME
+    def get_property_descriptors(self):
+        return [
+            self.QUERY
         ]
-    )
 
-    def get_property_groups(self) -> List[PropertyGroupDescriptor]:
-        return [self.DEFAULT_PROPS_GROUP]
+    def get_relations(self):
+        return []
 
     def run(self,
-            processor_context: ProcessorContext) -> Dependency:
+            processor_context: ProcessorContext) -> FlowDF:
 
-        for dependency in processor_context.dependencies:
-            assert 'view_name' in dependency.config, \
+        for dependency in processor_context.get_flow_dfs():
+            assert 'view_name' in dependency.attributes, \
                 'Missing view_name in dependency.'
-            view_name = dependency.config['view_name']
+            view_name = dependency.attributes['view_name']
             df = dependency.df
             df.createOrReplaceTempView(view_name)
 
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP)
-
         spark = processor_context.spark_session
-        query = default_options.get_property(self.QUERY)
+        query = processor_context.get_property(self.QUERY)
         processor_context.get_logger().info(f'Executing query {query}.')
         df = spark.sql(query)
         dependency_config = {}
-        view_name = default_options.get_property(self.VIEW_NAME)
+        view_name = processor_context.get_property(self.VIEW_NAME)
         if view_name is not None:
             dependency_config['view_name'] = view_name
-        return Dependency(df, dependency_config)
+        return FlowDF(df, dependency_config)
 
 
 class WriteProcessor(ActionProcessor):
@@ -131,44 +117,39 @@ class WriteProcessor(ActionProcessor):
         .required(False) \
         .build()
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            PATH,
-            FORMAT,
-            MODE,
-            PARTITION_BY
+    INPUT_RELATION = RelationDescriptor(name='INPUT')
+
+    def get_property_descriptors(self):
+        return [
+            self.PATH,
+            self.FORMAT,
+            self.MODE,
+            self.PARTITION_BY,
         ]
-    )
 
-    WRITE_OPTIONS_GROUP = PropertyGroupDescriptor(
-        group_name='write_options'
-    )
-
-    description = 'Processor to write dataframe.'
-
-    def get_property_groups(self):
-        return [self.DEFAULT_PROPS_GROUP,
-                self.WRITE_OPTIONS_GROUP]
+    def get_relations(self) -> List[RelationDescriptor]:
+        return [
+            self.INPUT_RELATION
+        ]
 
     def run(self,
             processor_context: ProcessorContext) -> None:
 
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP
-        )
+        path = processor_context.get_property(self.PATH)
+        write_format = processor_context.get_property(self.FORMAT)
+        mode = processor_context.get_property(self.MODE)
+        partition_by = processor_context.get_property(self.PARTITION_BY)
 
-        write_options = processor_context.get_property_group(
-            self.WRITE_OPTIONS_GROUP
-        )
+        write_options = {}
 
-        path = default_options.get_property(self.PATH)
-        format = default_options.get_property(self.FORMAT)
-        mode = default_options.get_property(self.MODE)
-        partition_by = default_options.get_property(self.PARTITION_BY)
+        for key, value in processor_context.get_properties().items():
+            if key.startswith('write.'):
+                key = key.rsplit(sep='.', maxsplit=1)[1]
 
-        source_df = processor_context.dependencies[0].df
+                write_options[key] = value
 
-        source_df.write.save(path=path, format=format,
-                             mode=mode, partitionBy=partition_by,
-                             **write_options)
+        input_df = processor_context.get_flow_df(self.INPUT_RELATION).df
+
+        input_df.write.save(path=path, format=write_format,
+                            mode=mode, partitionBy=partition_by,
+                            **write_options)

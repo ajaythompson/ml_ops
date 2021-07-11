@@ -9,8 +9,7 @@ import networkx as nx
 from networkx.classes.digraph import DiGraph
 from pyspark.sql.session import SparkSession
 
-from ml_ops.processor import Dependency, SparkProcessor, \
-    PropertyGroups, PropertyGroup
+from ml_ops.processor import FlowDF, SparkProcessor
 from ml_ops.processor import ProcessorContext
 
 
@@ -18,84 +17,81 @@ class WorkflowConfigException(Exception):
     pass
 
 
-class WFProcessor:
+class ProcessorConfig:
 
     def __init__(self,
                  name,
-                 type,
-                 property_groups,
-                 id=None):
-        if id is None:
-            id = str(uuid.uuid1())
-        self.id = id
+                 processor_type,
+                 properties,
+                 processor_id=None):
+        if processor_id is None:
+            processor_id = str(uuid.uuid1())
+        self.processor_id = processor_id
         self.name = name
-        self.type = type
-        self.property_groups = property_groups
+        self.processor_type = processor_type
+        self.properties = properties
 
     def json_value(self):
         json_value = {
-            'id': self.id,
+            'id': self.processor_id,
             'name': self.name,
-            'type': self.type,
-            'property_groups': self.property_groups
+            'type': self.processor_type,
+            'properties': self.properties
         }
         return json_value
 
     @classmethod
-    def get_processor(cls, config: dict) -> WFProcessor:
+    def get_processor(cls, config: dict) -> ProcessorConfig:
         processor_id = config.get('id')
         name = config.get('name', '')
-        type = config.get('type')
-        property_groups_config = config.get('property_groups', {})
+        processor_type = config.get('type')
+        properties = config.get('properties', {})
 
         if processor_id is None:
             raise WorkflowConfigException('Missing processor id in config.')
 
-        if type is None:
+        if processor_type is None:
             raise WorkflowConfigException(
                 'Missing processor type in processor',
                 f' config with id {processor_id}.'
             )
 
-        property_groups = PropertyGroups()
-
-        for group_name, group_properties in property_groups_config.items():
-            property_group = PropertyGroup()
-            for property_name, property_value in group_properties.items():
-                property_group[property_name] = property_value
-
-            property_groups[group_name] = property_group
-
-        return WFProcessor(
+        return ProcessorConfig(
             name=name,
-            type=type,
-            property_groups=property_groups,
-            id=processor_id
+            processor_type=processor_type,
+            properties=properties,
+            processor_id=processor_id
         )
 
 
-class WFRelation:
+class ConnectionConfig:
 
-    def __init__(self, left, right, id=None) -> None:
-        if id is None:
-            id = str(uuid.uuid1())
-        self.id = id
+    def __init__(self, left, right, connection_id=None, relation=None) -> None:
+        if connection_id is None:
+            connection_id = str(uuid.uuid1())
+        self.connection_id = connection_id
         self.left = left
         self.right = right
+        self.relation = relation
 
     def json_value(self):
         json_value = {
-            'id': self.id,
+            'id': self.connection_id,
             'left': self.left,
             'right': self.right
         }
+
+        if self.relation is not None:
+            json_value['relation'] = self.relation
+
         return json_value
 
     @classmethod
-    def get_relation(cls, config: dict) -> WFRelation:
+    def get_relation(cls, config: dict) -> ConnectionConfig:
         relation_id = config.get('id')
         left = config.get('left')
         right = config.get('right')
+        relation = config.get('relation')
 
         if relation_id is None:
             raise WorkflowConfigException('Missing relation id in config.')
@@ -110,24 +106,24 @@ class WFRelation:
                 f'Missing right relation id in config.'
                 f'for the relation {relation_id}.')
 
-        return WFRelation(left, right, relation_id)
+        return ConnectionConfig(left, right, relation_id, relation)
 
 
 class Workflow:
 
-    def __init__(self, id=None, processors=None, relations=None) -> None:
+    def __init__(self, id=None, processors=None, connections=None) -> None:
         if id is None:
             id = str(uuid.uuid1())
 
         if processors is None:
             processors = {}
 
-        if relations is None:
-            relations = {}
+        if connections is None:
+            connections = {}
 
         self.id = id
         self.processors = processors
-        self.relations = relations
+        self.connections = connections
 
     @classmethod
     def get_workflow(cls, config: dict) -> Workflow:
@@ -137,14 +133,14 @@ class Workflow:
         processors = config.get('processors', [])
         relations = config.get('relations', [])
 
-        processor_list = [WFProcessor.get_processor(processor_config) for
+        processor_list = [ProcessorConfig.get_processor(processor_config) for
                           processor_config in processors]
-        relation_list = [WFRelation.get_relation(relation_config) for
+        relation_list = [ConnectionConfig.get_relation(relation_config) for
                          relation_config in relations]
 
-        processor_dict = {processor.id: processor
+        processor_dict = {processor.processor_id: processor
                           for processor in processor_list}
-        relation_dict = {relation.id: relation
+        relation_dict = {relation.connection_id: relation
                          for relation in relation_list}
 
         return Workflow(id, processor_dict, relation_dict)
@@ -155,7 +151,7 @@ class Workflow:
                            for processor in self.processors.values()]
 
         json_relations = [relation.json_value()
-                          for relation in self.relations.values()]
+                          for relation in self.connections.values()]
 
         json_value = {
             'id': self.id,
@@ -164,28 +160,28 @@ class Workflow:
         }
         return json_value
 
-    def add_processor(self, wf_processor: WFProcessor):
-        self.processors[wf_processor.id] = wf_processor
+    def add_processor(self, wf_processor: ProcessorConfig):
+        self.processors[wf_processor.processor_id] = wf_processor
         return self
 
-    def add_relation(self, wf_relation: WFRelation):
-        self.relations[wf_relation.id] = wf_relation
+    def add_relation(self, wf_relation: ConnectionConfig):
+        self.connections[wf_relation.connection_id] = wf_relation
         return self
 
-    def get_processor(self, processor_id) -> WFProcessor:
+    def get_processor(self, processor_id) -> ProcessorConfig:
         assert processor_id in self.processors, \
             f'Processor with id {processor_id} not found.'
         return self.processors[processor_id]
 
     def get_relation(self, relation_id):
-        return self.relations.get(relation_id)
+        return self.connections.get(relation_id)
 
-    def update_processor(self, processor_id, wf_processor: WFProcessor):
+    def update_processor(self, processor_id, wf_processor: ProcessorConfig):
         wf_processor.id = processor_id
         self.processors[processor_id] = wf_processor
         return self
 
-    def update_relation(self, relation_id, wf_relation: WFRelation):
+    def update_relation(self, relation_id, wf_relation: ConnectionConfig):
         wf_relation.id = wf_relation
         self.processors[relation_id] = wf_relation
         return self
@@ -196,11 +192,15 @@ class Workflow:
 
     def get_graph(self):
         graph = nx.DiGraph()
-        edges = [(relation.left, relation.right)
-                 for relation in self.relations.values()]
+        # edges = [(relation.left, relation.right)
+        #          for relation in self.connections.values()]
+
+        for connection in self.connections.values():
+            graph.add_edge(connection.left, connection.right,
+                           relation=connection.relation)
         for processor in self.processors.values():
-            graph.add_node(processor.id)
-            graph.add_edges_from(edges)
+            graph.add_node(processor.processor_id)
+            # graph.add_edges_from(edges)
         return graph
 
     @classmethod
@@ -304,23 +304,28 @@ class SparkWorkflowManager:
                        workflow: Workflow,
                        processor_id: str,
                        graph: DiGraph,
-                       spark: SparkSession) -> Union[Dependency, None]:
+                       spark: SparkSession) -> Union[FlowDF, None]:
         processor_config = workflow.get_processor(processor_id)
         predecessors = []
         if graph.number_of_edges() > 0:
             predecessors = list(graph.predecessors(processor_id))
-        dependencies = []
         if not bool(predecessors):
             predecessors = []
-        for predecessor in predecessors:
-            dependencies.append(
-                cls.get_dependency(workflow, predecessor, graph, spark))
 
         processor_context = ProcessorContext(
             spark_session=spark,
-            property_groups=processor_config.property_groups,
-            dependencies=dependencies)
-        processor = SparkProcessor.get_spark_processor(processor_config.type)
+            properties=processor_config.properties)
+        for predecessor in predecessors:
+            edge_data = graph.get_edge_data(predecessor, processor_id)
+            relation = edge_data.get('relation')
+            flow_df = cls.get_dependency(workflow, predecessor, graph, spark)
+            if relation is not None:
+                processor_context.set_dynamic_flow_df(relation, flow_df)
+            else:
+                processor_context.set_dynamic_flow_df(predecessor, flow_df)
+
+        processor = SparkProcessor.get_spark_processor(
+            processor_config.processor_type)
 
         return processor.run(processor_context)
 

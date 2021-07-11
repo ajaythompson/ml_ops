@@ -1,10 +1,11 @@
 import json
+from typing import List
 
 from pyspark.sql.types import StructType
 
-from ml_ops.processor import ActionProcessor, Dependency, \
-    ProcessorContext, TransformProcessor
-from ml_ops.processor.configuration_constants import TRIGGER_TYPES,\
+from ml_ops.processor import ActionProcessor, FlowDF, \
+    ProcessorContext, TransformProcessor, RelationDescriptor
+from ml_ops.processor.configuration_constants import TRIGGER_TYPES, \
     ONCE_TRIGGER_TYPE
 from ml_ops.processor.property import PropertyDescriptorBuilder, \
     PropertyGroupDescriptor, get_boolean_value
@@ -27,6 +28,16 @@ class LoadStreamProcessor(TransformProcessor):
         .required(True) \
         .build()
 
+    def get_property_descriptors(self):
+        return [
+            self.PATH,
+            self.FORMAT,
+            self.SCHEMA,
+        ]
+
+    def get_relations(self):
+        return []
+
     DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
         group_name='default',
         prop_descriptors=[
@@ -46,24 +57,27 @@ class LoadStreamProcessor(TransformProcessor):
                 self.LOAD_OPTIONS_GROUP]
 
     def run(self,
-            processor_context: ProcessorContext) -> Dependency:
+            processor_context: ProcessorContext) -> FlowDF:
 
         logger = processor_context.get_logger()
 
         dependency_config = {}
 
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP)
-        load_options = processor_context.get_property_group(
-            self.LOAD_OPTIONS_GROUP)
+        load_options = {}
 
-        view_name = default_options.get_property(self.VIEW_NAME)
+        for key, value in processor_context.get_properties().items():
+            if key.startswith('read.'):
+                key = key.rsplit(sep='.', maxsplit=1)[1]
+
+                load_options[key] = value
+
+        view_name = processor_context.get_property(self.VIEW_NAME)
         if view_name is not None:
             dependency_config['view_name'] = view_name
 
-        path = default_options.get_property(self.PATH)
-        load_format = default_options.get_property(self.FORMAT)
-        schema = default_options.get_property(self.SCHEMA)
+        path = processor_context.get_property(self.PATH)
+        load_format = processor_context.get_property(self.FORMAT)
+        schema = processor_context.get_property(self.SCHEMA)
 
         json_schema = json.loads(schema)
         logger.info(f'Reading data using schema {json_schema}.')
@@ -72,7 +86,7 @@ class LoadStreamProcessor(TransformProcessor):
         df = processor_context.spark_session.readStream.load(
             path=path, format=load_format, schema=struct_type, **load_options)
 
-        return Dependency(df, dependency_config)
+        return FlowDF(df, dependency_config)
 
 
 class WriteStreamProcessor(ActionProcessor):
@@ -117,52 +131,49 @@ class WriteStreamProcessor(ActionProcessor):
         .default_value('true') \
         .build()
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            PATH,
-            FORMAT,
-            MODE,
-            PARTITION_BY,
-            TRIGGER_TYPE,
-            TRIGGER_VALUE
+    INPUT_RELATION = RelationDescriptor(name='INPUT')
+
+    def get_property_descriptors(self):
+        return [
+            self.PATH,
+            self.FORMAT,
+            self.MODE,
+            self.PARTITION_BY,
+            self.TRIGGER_TYPE,
+            self.TRIGGER_VALUE,
         ]
-    )
 
-    WRITE_OPTIONS_GROUP = PropertyGroupDescriptor(
-        group_name='write_options'
-    )
-
-    def get_property_groups(self):
-        return [self.DEFAULT_PROPS_GROUP,
-                self.WRITE_OPTIONS_GROUP]
+    def get_relations(self) -> List[RelationDescriptor]:
+        return [
+            self.INPUT_RELATION
+        ]
 
     def run(self,
             processor_context: ProcessorContext) -> None:
-        default_options = processor_context.get_property_group(
-            self.DEFAULT_PROPS_GROUP
-        )
-
-        write_options = processor_context.get_property_group(
-            self.WRITE_OPTIONS_GROUP
-        )
-
-        path = default_options.get_property(self.PATH)
-        write_format = default_options.get_property(self.FORMAT)
-        mode = default_options.get_property(self.MODE)
-        partition_by = default_options.get_property(self.PARTITION_BY)
-        trigger_type = default_options.get_property(
+        path = processor_context.get_property(self.PATH)
+        write_format = processor_context.get_property(self.FORMAT)
+        mode = processor_context.get_property(self.MODE)
+        partition_by = processor_context.get_property(self.PARTITION_BY)
+        trigger_type = processor_context.get_property(
             self.TRIGGER_TYPE, self.TRIGGER_TYPE.default_value)
-        trigger_value = default_options.get_property(
+        trigger_value = processor_context.get_property(
             self.TRIGGER_VALUE, self.TRIGGER_VALUE.default_value)
         if trigger_type == ONCE_TRIGGER_TYPE:
             trigger_value = get_boolean_value(trigger_value, True)
 
-        source_df = processor_context.dependencies[0].df
+        source_df = processor_context.get_flow_df(self.INPUT_RELATION).df
 
         trigger_params = {trigger_type: trigger_value}
 
         # TODO check query name
+
+        write_options = {}
+
+        for key, value in processor_context.get_properties().items():
+            if key.startswith('write.'):
+                key = key.rsplit(sep='.', maxsplit=1)[1]
+
+                write_options[key] = value
 
         source_df \
             .writeStream \

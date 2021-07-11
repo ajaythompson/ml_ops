@@ -6,8 +6,7 @@ from pyspark.conf import SparkConf
 from pyspark.sql.session import SparkSession
 from pyspark.sql.types import StructType
 
-from ml_ops.processor import ProcessorContext, PropertyGroup, PropertyGroups,\
-    Dependency
+from ml_ops.processor import ProcessorContext, FlowDF
 from ml_ops.processor.stream import WriteStreamProcessor
 
 FIXTURE_DIR = os.path.join(
@@ -47,26 +46,22 @@ def test_write_stream_processor(spark_session: SparkSession):
 
     input_path = f'{FIXTURE_DIR}/sample_load.csv'
     output_path = f'{TEST_DIR}/sample_load.csv'
-    default_props = PropertyGroup()
-    default_props.set_property(WriteStreamProcessor.PATH, output_path)
-    default_props.set_property(WriteStreamProcessor.FORMAT, 'csv')
-
-    property_groups = PropertyGroups()
-    property_groups.set_property_group(
-        WriteStreamProcessor.WRITE_OPTIONS_GROUP, write_options)
-    property_groups.set_property_group(
-        WriteStreamProcessor.DEFAULT_PROPS_GROUP, default_props
-    )
 
     dependency_df = spark_session.readStream.load(
         path=input_path,
         format='csv',
         schema=StructType.fromJson(schema),
         **write_options)
-    dependency = Dependency(dependency_df, {})
-    processor_context = ProcessorContext(spark_session,
-                                         property_groups,
-                                         [dependency])
+    input = FlowDF(dependency_df, {})
+
+    processor_context = ProcessorContext(spark_session)
+
+    processor_context.set_property(WriteStreamProcessor.PATH, output_path)
+    processor_context.set_property(WriteStreamProcessor.FORMAT, 'csv')
+    for key, value in write_options.items():
+        processor_context.set_dynamic_property(f'write.{key}', value)
+
+    processor_context.set_flow_df(WriteStreamProcessor.INPUT_RELATION, input)
 
     processor = WriteStreamProcessor()
     processor.run(processor_context)
