@@ -8,7 +8,7 @@ from ml_ops.processor import ActionProcessor, FlowDF, \
 from ml_ops.processor.configuration_constants import TRIGGER_TYPES, \
     ONCE_TRIGGER_TYPE
 from ml_ops.processor.property import PropertyDescriptorBuilder, \
-    PropertyGroupDescriptor, get_boolean_value
+    get_boolean_value
 
 
 class LoadStreamProcessor(TransformProcessor):
@@ -38,23 +38,23 @@ class LoadStreamProcessor(TransformProcessor):
     def get_relations(self):
         return []
 
-    DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
-        group_name='default',
-        prop_descriptors=[
-            PATH,
-            FORMAT,
-            SCHEMA,
-            TransformProcessor.VIEW_NAME
-        ]
-    )
+    # DEFAULT_PROPS_GROUP = PropertyGroupDescriptor(
+    #     group_name='default',
+    #     prop_descriptors=[
+    #         PATH,
+    #         FORMAT,
+    #         SCHEMA,
+    #         TransformProcessor.VIEW_NAME
+    #     ]
+    # )
 
-    LOAD_OPTIONS_GROUP = PropertyGroupDescriptor(
-        group_name='load_options'
-    )
+    # LOAD_OPTIONS_GROUP = PropertyGroupDescriptor(
+    #     group_name='load_options'
+    # )
 
-    def get_property_groups(self):
-        return [self.DEFAULT_PROPS_GROUP,
-                self.LOAD_OPTIONS_GROUP]
+    # def get_property_groups(self):
+    #     return [self.DEFAULT_PROPS_GROUP,
+    #             self.LOAD_OPTIONS_GROUP]
 
     def run(self,
             processor_context: ProcessorContext) -> FlowDF:
@@ -78,7 +78,6 @@ class LoadStreamProcessor(TransformProcessor):
         path = processor_context.get_property(self.PATH)
         load_format = processor_context.get_property(self.FORMAT)
         schema = processor_context.get_property(self.SCHEMA)
-
         json_schema = json.loads(schema)
         logger.info(f'Reading data using schema {json_schema}.')
         struct_type = StructType.fromJson(json_schema)
