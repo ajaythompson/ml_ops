@@ -8,7 +8,7 @@ from ml_ops.processor import ActionProcessor, FlowDF, \
 from ml_ops.processor.configuration_constants import TRIGGER_TYPES, \
     ONCE_TRIGGER_TYPE
 from ml_ops.processor.property import PropertyDescriptorBuilder, \
-    PropertyGroupDescriptor, get_boolean_value
+    get_boolean_value
 
 
 class LoadStreamProcessor(TransformProcessor):
