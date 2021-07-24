@@ -28,6 +28,15 @@ class PropertyDescriptor:
         default_value: {self.default_value}
         ''')
 
+    def to_json(self) -> dict:
+        return {
+            'name': self.name,
+            'description': self.description,
+            'required': self.required,
+            'allowed_values': self.allowed_values,
+            'default_value': self.default_value
+        }
+
 
 class PropertyDescriptorBuilder:
 
@@ -81,7 +90,7 @@ class PropertyException(Exception):
 class PropertyGroupDescriptor(ABC):
 
     def __init__(self, group_name,
-                 prop_descriptors: List[PropertyDescriptor] = []):
+                 prop_descriptors: List[PropertyDescriptor]):
         self.group_name = group_name
         self.prop_descriptors = {prop_descriptor.name: prop_descriptor
                                  for prop_descriptor in prop_descriptors}

@@ -23,21 +23,21 @@ class SparkProcessor(ABC):
         Base class for post processor.
     """
 
-    _types = {}
+    types = {}
 
     DEFAULT_PROPS_GROUP = 'default'
 
     @staticmethod
     def get_spark_processor(processor_type: str) -> SparkProcessor:
-        assert processor_type in SparkProcessor._types, \
+        assert processor_type in SparkProcessor.types, \
             f'SparkProcessor implementation not found ' \
             f'for {processor_type}.'
-        return SparkProcessor._types.get(processor_type)()
+        return SparkProcessor.types.get(processor_type)()
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls._types[cls.__name__] = cls
+        cls.types[cls.__name__] = cls
 
     @abstractmethod
     def get_property_descriptors(self) -> List[PropertyDescriptor]:
