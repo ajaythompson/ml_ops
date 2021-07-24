@@ -42,7 +42,7 @@ class ProcessorConfig:
 
     @classmethod
     def get_processor(cls, config: dict) -> ProcessorConfig:
-        processor_id = config.get('id')
+        processor_id = config.get('id', str(uuid.uuid1()))
         name = config.get('name', '')
         processor_type = config.get('type')
         properties = config.get('properties', {})
@@ -88,7 +88,7 @@ class ConnectionConfig:
 
     @classmethod
     def get_relation(cls, config: dict) -> ConnectionConfig:
-        relation_id = config.get('id')
+        relation_id = config.get('id', str(uuid.uuid1()))
         left = config.get('left')
         right = config.get('right')
         relation = config.get('relation')
@@ -210,6 +210,20 @@ class Workflow:
 
 class WorkflowRepository(ABC):
 
+    _types = {}
+
+    @classmethod
+    def get_repository(cls, repository_type: str) -> WorkflowRepository:
+        assert repository_type in WorkflowRepository._types, \
+            f'Workflow repository implementation not found ' \
+            f'for {repository_type}.'
+        return WorkflowRepository._types.get(repository_type)()
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._types[cls.__name__] = cls
+
     @abstractmethod
     def create_workflow(self) -> Workflow:
         """Adds a new workflow.
@@ -328,13 +342,6 @@ class SparkWorkflowManager:
             processor_config.processor_type)
 
         return processor.run(processor_context)
-
-    # @classmethod
-    # def validate_processor(cls, wf_processor: WFProcessor):
-    #     actual = wf_processor.property_groups
-    #     processor_type = wf_processor.type
-    #     processor = SparkProcessor.get_spark_processor(processor_type)
-    #     expected = processor.get_property_groups()
 
     def run(self,
             workflow_id: str,

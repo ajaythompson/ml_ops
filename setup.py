@@ -33,6 +33,12 @@ sklearn = [
 
 EXTRAS_REQUIREMENTS['sklearn'] = sklearn
 
+ui = [
+    'flask==2.0.1'
+]
+
+EXTRAS_REQUIREMENTS['ui'] = ui
+
 _all_requirements = list(
     {req for extras_reqs in EXTRAS_REQUIREMENTS.values() for req in
      extras_reqs})
