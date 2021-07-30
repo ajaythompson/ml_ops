@@ -1,6 +1,7 @@
 from typing import Dict
 
-from flask import g, Flask, request
+from flask import g, Flask, request, render_template, send_from_directory
+from flask_cors import CORS
 from pyspark.conf import SparkConf
 from pyspark.sql import SparkSession
 
@@ -8,7 +9,17 @@ from ml_ops.processor import SparkProcessor
 from ml_ops.workflow import WorkflowRepository, ProcessorConfig, \
     SparkWorkflowManager, ConnectionConfig
 
-app = Flask(__name__)
+
+UI_BUILD_PATH = '../../ui/build'
+UI_STATIC_PATH = f'{UI_BUILD_PATH}/static'
+
+app = Flask(__name__,
+            static_folder=UI_STATIC_PATH,
+            template_folder=UI_BUILD_PATH)
+
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
+
+cors
 
 WORKFLOW_BASE_PATH = '/workflow'
 PROCESSORS_BASE_PATH = '/processors'
@@ -48,6 +59,26 @@ with app.app_context():
     repo = get_workflow_repo()
     spark = get_spark_session({})
     workflow_manager = get_workflow_manager(repo)
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory(UI_BUILD_PATH, 'manifest.json')
+
+
+@app.route('/logo192.png')
+def logo():
+    return send_from_directory(UI_BUILD_PATH, 'logo192.png')
+
+
+@app.route('/favicon.ico')
+def icon():
+    return send_from_directory(UI_BUILD_PATH, 'favicon.ico')
 
 
 @app.route(f'{WORKFLOW_BASE_PATH}/<workflow_id>', methods=['GET'])
