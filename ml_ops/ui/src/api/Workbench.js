@@ -6,3 +6,7 @@ axios.defaults.baseURL = `http://localhost:5000`;
 export const getProcessorList = () => {
     return axios.get('/processors')
 }
+
+export const createWorkflow = () => {
+    return axios.post('/workflow')
+}

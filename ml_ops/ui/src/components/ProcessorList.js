@@ -34,6 +34,7 @@ const useStyles = makeStyles((theme) => ({
 export default function ProcessorList(props) {
     const classes = useStyles();
     const [modalStyle] = React.useState(getModalStyle);
+    // const [showProcessor, setShowProcessor] = React.useState(false)
 
 
     return (
@@ -41,7 +42,8 @@ export default function ProcessorList(props) {
             <h2 id="simple-modal-title">Processors</h2>
             <List>
                 <TableContainer style={modalStyle} className={classes.paper}>
-                    <Table className={classes.table} aria-label="simple table" size='small' stickyHeader>
+                    <Table className={classes.table}
+                        aria-label="simple table" size='small' stickyHeader>
                         <TableHead>
                             <TableRow>
                                 <TableCell>Processors</TableCell>
@@ -51,7 +53,7 @@ export default function ProcessorList(props) {
                             {props.processors.map((name) => (
                                 <TableRow key={ListItem}>
                                     <TableCell component="th" scope="row">
-                                        <button>
+                                        <button onClick={props.hideFun}>
                                             {name}
                                         </button>
 
