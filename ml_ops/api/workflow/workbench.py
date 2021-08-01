@@ -130,9 +130,4 @@ def list_processors() -> Dict[str, list]:
 @app.route(f'{PROCESSOR_BASE_PATH}/<processor_name>', methods=['GET'])
 def get_processor(processor_name: str):
     processor = SparkProcessor.get_spark_processor(processor_name)
-    result = {}
-
-    for property_desc in processor.get_property_descriptors():
-        result[property_desc.name] = property_desc.to_json()
-
-    return result
+    return processor.to_json()

@@ -10,3 +10,11 @@ export const getProcessorList = () => {
 export const createWorkflow = () => {
     return axios.post('/workflow')
 }
+
+export const addProcessor = (workflowId, data) => {
+    return axios.post(`/workflow/${workflowId}/processor`, data)
+}
+
+export const getProcessorDescription = (processorName) => {
+    return axios.get(`/processor/${processorName}`)
+}
