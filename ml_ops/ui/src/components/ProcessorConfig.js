@@ -36,13 +36,14 @@ const useStyles = makeStyles((theme) => ({
 export default function ProcessorConfig(props) {
     const classes = useStyles();
     const [modalStyle] = React.useState(getModalStyle);
-    const [state, setState] = React.useState({ "type": props.config.type });
+    const processorType = props.config.type
+    const [properties, setProperties] = React.useState({});
+
     const handleChange = e => {
         const target = e.target
         const name = target.id
         const value = target.value
-        console.log(state)
-        setState(prevState => ({
+        setProperties(prevState => ({
             ...prevState,
             [name]: value
         }));
@@ -52,16 +53,20 @@ export default function ProcessorConfig(props) {
     const handleSubmit = (event) => {
         // Prevent default behavior
         event.preventDefault();
-        console.log(state)
-        addProcessor(props.workflow.id, state)
+        const body = {
+            "type": processorType,
+            "properties": properties
+        }
+        console.log(body)
+        addProcessor(props.workflow.id, body)
             .then(
-                resp => console.log(resp.data)
+                resp => props.setWorkflow(resp.data)
             )
     }
 
-    function processorInput(properties) {
+    function processorInput(props) {
         return (
-            properties.map(
+            props.map(
                 property =>
                     <div key={property.name}>
                         <TextField

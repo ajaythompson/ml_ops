@@ -83,18 +83,30 @@ def icon():
 
 @app.route(f'{WORKFLOW_BASE_PATH}/<workflow_id>', methods=['GET'])
 def get_workflow(workflow_id):
-    return repo.read_workflow(workflow_id).json_value()
+    workflow = repo.read_workflow(workflow_id)
+    if workflow is None:
+        raise Exception(f'Workflow with id {workflow_id} not found!')
+    return workflow.json_value()
 
 
-@app.route(f'{WORKFLOW_BASE_PATH}', methods=['POST'])
+@app.route(f'{WORKFLOW_BASE_PATH}', methods=['POST', 'GET'])
 def create_workflow():
-    return repo.create_workflow().json_value()
+
+    if request.method == 'POST':
+        return repo.create_workflow().json_value()
+    else:
+        result = {
+            'workflows': [x.json_value() for x in repo.get_workflows()]
+        }
+        return result
 
 
 @app.route(f'{WORKFLOW_BASE_PATH}/<workflow_id>/processor',
            methods=['POST', 'PUT'])
 def add_processor(workflow_id):
     workflow = repo.read_workflow(workflow_id)
+    if workflow is None:
+        raise Exception('Workflow not found.')
     processor_id = request.json.get('id')
     processor_config = ProcessorConfig.get_processor(request.json)
 

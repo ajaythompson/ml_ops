@@ -3,13 +3,11 @@ import AppBar from '@material-ui/core/AppBar'
 import Button from '@material-ui/core/Button'
 import Modal from '@material-ui/core/Modal'
 import Toolbar from '@material-ui/core/Toolbar'
-import { makeStyles } from '@material-ui/core/styles';
 
 import ProcessorList from './ProcessorList';
 import styles from './Workbench.css';
 import { getProcessorList, createWorkflow } from '../api/Workbench';
 import Canvas from './Canvas';
-import Draggable from 'react-draggable';
 import ProcessorConfig from './ProcessorConfig'
 import { getProcessorDescription } from '../api/Workbench';
 
@@ -67,21 +65,6 @@ export default function Workbench() {
         this.setState({ activeDrags: --this.state.activeDrags });
     };
 
-    const useStyles = makeStyles((theme) => ({
-        box: {
-            position: 'absolute',
-            height: 50,
-            width: 100,
-            backgroundColor: theme.palette.background.paper,
-            border: '2px solid #000',
-            boxShadow: theme.shadows[5],
-            padding: theme.spacing(2, 4, 3),
-        },
-    }));
-
-
-    const classes = useStyles();
-
 
     return (
         <div>
@@ -107,17 +90,13 @@ export default function Workbench() {
                 open={mountProcessorConfig}
                 onClose={hideProcessorConfig}
                 className={styles.paper}>
-                <ProcessorConfig config={processorConfig} workflow={workflow} />
+                <ProcessorConfig
+                    config={processorConfig}
+                    workflow={workflow}
+                    setWorkflow={setWorkflow}
+                />
             </Modal>
-            <div className={classes.box} style={{ height: '500px', width: '500px', position: 'relative', overflow: 'auto', padding: '0' }}>
-                <div style={{ height: '1000px', width: '1000px', padding: '10px' }}>
-                    <Draggable bounds="parent">
-                        <div className={classes.box}>
-                            Load Processor
-                        </div>
-                    </Draggable>
-                </div>
-            </div>
+            <Canvas workflow={workflow}></Canvas>
         </div>
     )
 }

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import List, Union
 
 import networkx as nx
 from networkx.classes.digraph import DiGraph
@@ -234,6 +234,15 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
+    def get_workflows(self) -> List[Workflow]:
+        """Adds a new workflow.
+
+        Returns:
+            str: workflow.
+        """
+        pass
+
+    @abstractmethod
     def read_workflow(self, id: str) -> Workflow:
         """Fetch the workflow for the given id.
 
@@ -275,6 +284,9 @@ class InMemoryWFRepository(WorkflowRepository, dict):
         workflow = Workflow()
         self[workflow.id] = workflow
         return workflow
+
+    def get_workflows(self) -> List[Workflow]:
+        return self.values()
 
     def read_workflow(self, id: str) -> Workflow:
         return self.get(id)
