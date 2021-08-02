@@ -19,8 +19,6 @@ app = Flask(__name__,
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
-cors
-
 WORKFLOW_BASE_PATH = '/workflow'
 PROCESSORS_BASE_PATH = '/processors'
 PROCESSOR_BASE_PATH = '/processor'
