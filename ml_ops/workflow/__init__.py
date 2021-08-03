@@ -23,20 +23,33 @@ class ProcessorConfig:
                  name,
                  processor_type,
                  properties,
-                 processor_id=None):
+                 processor_id=None,
+                 x_pos=None,
+                 y_pos=None):
         if processor_id is None:
             processor_id = str(uuid.uuid1())
+
+        if x_pos is None:
+            x_pos = 0
+
+        if y_pos is None:
+            y_pos = 0
+
         self.processor_id = processor_id
         self.name = name
         self.processor_type = processor_type
         self.properties = properties
+        self.x_pos = x_pos
+        self.y_pos = y_pos
 
     def json_value(self):
         json_value = {
             'id': self.processor_id,
             'name': self.name,
             'type': self.processor_type,
-            'properties': self.properties
+            'properties': self.properties,
+            'x_pos': self.x_pos,
+            'y_pos': self.y_pos
         }
         return json_value
 
@@ -46,6 +59,8 @@ class ProcessorConfig:
         name = config.get('name', '')
         processor_type = config.get('type')
         properties = config.get('properties', {})
+        x_pos = config.get('x_pos')
+        y_pos = config.get('y_pos')
 
         if processor_id is None:
             raise WorkflowConfigException('Missing processor id in config.')
@@ -60,7 +75,9 @@ class ProcessorConfig:
             name=name,
             processor_type=processor_type,
             properties=properties,
-            processor_id=processor_id
+            processor_id=processor_id,
+            x_pos=x_pos,
+            y_pos=y_pos
         )
 
 

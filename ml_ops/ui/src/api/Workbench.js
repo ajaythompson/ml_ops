@@ -15,6 +15,14 @@ export const addProcessor = (workflowId, data) => {
     return axios.post(`/workflow/${workflowId}/processor`, data)
 }
 
+export const updateProcessor = (workflowId, data) => {
+    return axios.put(`/workflow/${workflowId}/processor`, data)
+}
+
 export const getProcessorDescription = (processorName) => {
     return axios.get(`/processor/${processorName}`)
+}
+
+export const addRelation = (workflowId, data) => {
+    return axios.post(`/workflow/${workflowId}/connection`, data)
 }

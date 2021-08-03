@@ -71,7 +71,7 @@ export default function Workbench() {
             <AppBar position="static">
                 <Toolbar>
                     <Button variant="contained"
-                        onClick={newWorkflow}>C</Button>
+                        onClick={newWorkflow}>W</Button>
                     <Button variant="contained"
                         onClick={showProcessorList}>P</Button>
                 </Toolbar>
@@ -96,7 +96,7 @@ export default function Workbench() {
                     setWorkflow={setWorkflow}
                 />
             </Modal>
-            <Canvas workflow={workflow}></Canvas>
+            <Canvas workflow={workflow} setWorkflow={setWorkflow}></Canvas>
         </div>
     )
 }
