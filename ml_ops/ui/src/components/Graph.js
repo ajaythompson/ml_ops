@@ -10,7 +10,7 @@ import {
 } from 'react-digraph';
 
 import React from 'react';
-import { addRelation } from '../api/Workbench'
+import { addRelation, updateProcessor } from '../api/Workbench'
 
 const GraphConfig = {
     NodeTypes: {
@@ -58,10 +58,11 @@ class Graph extends React.Component {
     /* Define custom graph editing methods here */
     onCreateNode() {
         this.setState({})
-        console.log(this.state)
+        // console.log(this.state)
     }
 
     onSelect(event) {
+        console.log('selecting')
         console.log(event)
     }
 
@@ -70,11 +71,6 @@ class Graph extends React.Component {
     }
 
     onCreateEdge(source, target) {
-        console.log(source)
-        console.log(target)
-
-        console.log(this.props)
-
         const workflowId = this.props.graph.id
 
         const data = {
@@ -89,6 +85,17 @@ class Graph extends React.Component {
                 }
             )
 
+    }
+
+    onUpdateNode(node) {
+        console.log('updating')
+        const workflowId = this.props.graph.id
+        updateProcessor(workflowId, node)
+            .then(
+                resp => {
+                    this.props.setWorkflow(resp.data)
+                }
+            )
     }
 
     styles = {
@@ -124,7 +131,7 @@ class Graph extends React.Component {
                     allowMultiselect={true} // true by default, set to false to disable multi select.
                     onSelect={this.onSelect}
                     onCreateNode={this.onCreateNode}
-                    onUpdateNode={this.onUpdateNode}
+                    onUpdateNode={(node) => this.onUpdateNode(node)}
                     onDeleteNode={this.onDeleteNode}
                     onCreateEdge={(source, target) => this.onCreateEdge(source, target)}
                     onSwapEdge={this.onSwapEdge}
