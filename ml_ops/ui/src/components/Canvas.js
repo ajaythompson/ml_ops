@@ -2,7 +2,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Draggable from 'react-draggable';
 import React from 'react';
 import { addRelation, updateProcessor } from '../api/Workbench';
-
+import { LineTo } from 'react-lineto';
 
 export default function Canvas(props) {
 
@@ -50,7 +50,9 @@ export default function Canvas(props) {
             height: "2px",
             "background-color": "red",
             top: "100px",
-            left: "50px"
+            left: "50px",
+            right: "10px",
+            transform: "skew(-45deg)"
         }
     }));
 
@@ -58,7 +60,7 @@ export default function Canvas(props) {
     const classes = useStyles();
     const workflow = props.workflow
 
-    function getWorkflow(workflow) {
+    function getWorkflow() {
         if (workflow != null) {
             return getProcessors(workflow.processors)
         }
@@ -155,6 +157,47 @@ export default function Canvas(props) {
 
     }
 
+    function getRelations() {
+        if (workflow != null && workflow.relations.length > 0) {
+            const processorMap = new Map(workflow.processors.map(i => [i.id, i]))
+            const relations = workflow.relations
+            console.log(relations)
+            return relations.map(
+                rel => {
+                    const leftProcessor = processorMap.get(rel.left)
+                    const rightProcessor = processorMap.get(rel.right)
+
+                    // const x1 = leftProcessor.x_pos
+                    // const x2 = rightProcessor.x_pos
+                    // const y1 = leftProcessor.y_pos
+                    // const y2 = rightProcessor.y_pos
+
+                    // return (
+                    //     <div>
+                    //         <h1>HELLO</h1>
+                    //         <Line x1={x1} y1={y1} x2={x2} y2={y2}
+                    //             borderColor="black"
+                    //             borderWidth="10%" />
+                    //     </div>
+
+                    // )
+                    return (
+                        <LineTo
+                            id={rel.id}
+                            from={leftProcessor.id}
+                            to={rightProcessor.id}
+                            borderStyle="dashed"
+                            borderColor="red"
+                            borderWidth="2px"
+                            delay="0"
+                        />
+
+                    )
+                }
+            )
+        }
+    }
+
     return (
         <div className={classes.box} style={{
             height: '1500px', width: '1500px',
@@ -162,14 +205,17 @@ export default function Canvas(props) {
             overflow: 'auto', padding: '0'
         }}>
             <div style={{ height: '1500px', width: '1500px', padding: '10px' }}>
-                {getWorkflow(workflow)}
+                {getWorkflow()}
+                {getRelations()}
             </div>
 
-            <svg>
-                <circle stroke-width="1px" stroke="red" x1="0" y1="0" x2="100" y2="50   " id="mySVG" />
-            </svg>
-
         </div>
+
+        // <div>
+        //     <div className="A">Element A</div>
+        //     <div className="B">Element B</div>
+        //     <LineTo from="A" to="B" />
+        // </div>
     )
 
 }

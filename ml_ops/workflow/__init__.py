@@ -24,43 +24,50 @@ class ProcessorConfig:
                  processor_type,
                  properties,
                  processor_id=None,
-                 x_pos=None,
-                 y_pos=None):
+                 x=None,
+                 y=None):
         if processor_id is None:
             processor_id = str(uuid.uuid1())
 
-        if x_pos is None:
-            x_pos = 0
+        if x is None:
+            x = 0
 
-        if y_pos is None:
-            y_pos = 0
+        if y is None:
+            y = 0
 
         self.processor_id = processor_id
         self.name = name
         self.processor_type = processor_type
         self.properties = properties
-        self.x_pos = x_pos
-        self.y_pos = y_pos
+        self.x = x
+        self.y = y
 
     def json_value(self):
+
+        title = self.name
+
+        if title is None:
+            title = self.processor_type
+
         json_value = {
             'id': self.processor_id,
-            'name': self.name,
-            'type': self.processor_type,
+            'title': title,
+            'processor_type': self.processor_type,
             'properties': self.properties,
-            'x_pos': self.x_pos,
-            'y_pos': self.y_pos
+            'x': self.x,
+            'y': self.y,
+            'type': 'node',
         }
         return json_value
 
     @classmethod
     def get_processor(cls, config: dict) -> ProcessorConfig:
         processor_id = config.get('id', str(uuid.uuid1()))
-        name = config.get('name', '')
-        processor_type = config.get('type')
+        processor_type = config.get('processor_type')
+        title = config.get('name', processor_type)
         properties = config.get('properties', {})
-        x_pos = config.get('x_pos')
-        y_pos = config.get('y_pos')
+        x = config.get('x')
+        y = config.get('y')
 
         if processor_id is None:
             raise WorkflowConfigException('Missing processor id in config.')
@@ -72,12 +79,12 @@ class ProcessorConfig:
             )
 
         return ProcessorConfig(
-            name=name,
+            name=title,
             processor_type=processor_type,
             properties=properties,
             processor_id=processor_id,
-            x_pos=x_pos,
-            y_pos=y_pos
+            x=x,
+            y=y
         )
 
 
@@ -94,8 +101,9 @@ class ConnectionConfig:
     def json_value(self):
         json_value = {
             'id': self.connection_id,
-            'left': self.left,
-            'right': self.right
+            'source': self.left,
+            'target': self.right,
+            'type': 'edge',
         }
 
         if self.relation is not None:
@@ -106,8 +114,8 @@ class ConnectionConfig:
     @classmethod
     def get_relation(cls, config: dict) -> ConnectionConfig:
         relation_id = config.get('id', str(uuid.uuid1()))
-        left = config.get('left')
-        right = config.get('right')
+        left = config.get('source')
+        right = config.get('target')
         relation = config.get('relation')
 
         if relation_id is None:
@@ -147,8 +155,8 @@ class Workflow:
         workflow_id = config.get('id')
         if workflow_id is None:
             raise WorkflowConfigException('Missing workflow id in config.')
-        processors = config.get('processors', [])
-        relations = config.get('relations', [])
+        processors = config.get('nodes', [])
+        relations = config.get('edges', [])
 
         processor_list = [ProcessorConfig.get_processor(processor_config) for
                           processor_config in processors]
@@ -172,8 +180,8 @@ class Workflow:
 
         json_value = {
             'id': self.id,
-            'processors': json_processors,
-            'relations': json_relations
+            'nodes': json_processors,
+            'edges': json_relations
         }
         return json_value
 

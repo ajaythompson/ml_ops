@@ -10,7 +10,24 @@ import { getProcessorList, createWorkflow } from '../api/Workbench';
 import Canvas from './Canvas';
 import ProcessorConfig from './ProcessorConfig'
 import { getProcessorDescription } from '../api/Workbench';
+import Graph from './Graph';
 
+
+const data = {
+    "edges": [],
+    "id": "1c1177fc-f512-11eb-a1f4-00155de8c683",
+    "nodes": [
+        {
+            "id": "1e5a2f54-f512-11eb-b072-00155de8c683",
+            "title": "asdf",
+            "processor_type": "LoadProcessor",
+            "properties": {},
+            "type": "node",
+            "x": 0,
+            "y": 0
+        }
+    ]
+}
 
 export default function Workbench() {
 
@@ -57,13 +74,22 @@ export default function Workbench() {
         });
     }
 
-    const onStart = () => {
-        this.setState({ activeDrags: ++this.state.activeDrags });
-    };
 
-    const onStop = () => {
-        this.setState({ activeDrags: --this.state.activeDrags });
-    };
+    const renderWorkflow = (x) => {
+
+        if (workflow == null) {
+            return (
+                <div>
+                    <h1>
+                        Kindly create new workflow!
+                    </h1>
+                </div>)
+        } else {
+            return (<Graph graph={x} setWorkflow={setWorkflow} />)
+        }
+    }
+
+
 
 
     return (
@@ -96,7 +122,7 @@ export default function Workbench() {
                     setWorkflow={setWorkflow}
                 />
             </Modal>
-            <Canvas workflow={workflow} setWorkflow={setWorkflow}></Canvas>
+            {renderWorkflow(workflow)}
         </div>
     )
 }

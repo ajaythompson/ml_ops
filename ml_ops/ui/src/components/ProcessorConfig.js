@@ -54,7 +54,7 @@ export default function ProcessorConfig(props) {
         // Prevent default behavior
         event.preventDefault();
         const body = {
-            "type": processorType,
+            "processor_type": processorType,
             "properties": properties
         }
         console.log(body)
