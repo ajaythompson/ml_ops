@@ -8,9 +8,11 @@ import {
     BwdlTransformer, // optional, Example JSON transformer
     GraphUtils // optional, useful utility functions
 } from 'react-digraph';
-
+import Modal from '@material-ui/core/Modal'
 import React from 'react';
 import { addRelation, updateProcessor } from '../api/Workbench'
+import ProcessorOption from './ProcessorOption';
+import styles from './Workbench.css';
 
 const GraphConfig = {
     NodeTypes: {
@@ -53,6 +55,10 @@ class Graph extends React.Component {
 
     constructor(props) {
         super(props);
+
+        this.state = {
+            "mountProcessorOptions": false
+        }
     }
 
     /* Define custom graph editing methods here */
@@ -61,9 +67,16 @@ class Graph extends React.Component {
         // console.log(this.state)
     }
 
-    onSelect(event) {
+    onSelect(node) {
         console.log('selecting')
-        console.log(event)
+        this.setState(
+            prevState => ({
+                ...prevState,
+                "selected": node,
+                "mountProcessorOptions": true
+            })
+        )
+        console.log(this.state)
     }
 
     onBackgroundClick() {
@@ -98,11 +111,34 @@ class Graph extends React.Component {
             )
     }
 
+    unMountProcessorOptions() {
+        this.setState(
+            prevState => ({
+                ...prevState,
+                "mountProcessorOptions": false
+            })
+        )
+    }
+
     styles = {
         graph: {
             height: '90vh',
             width: '100%'
 
+        },
+        paper: {
+            position: 'absolute',
+            width: 400,
+            border: '2px solid #000',
+        },
+        root: {
+            position: 'absolute',
+            width: '100%',
+            maxWidth: 360,
+            // backgroundColor: theme.palette.background.paper,
+            border: '2px solid #000',
+            // boxShadow: theme.shadows[5],
+            // padding: theme.spacing(2, 4, 3),
         }
     }
 
@@ -129,7 +165,7 @@ class Graph extends React.Component {
                     nodeSubtypes={NodeSubtypes}
                     edgeTypes={EdgeTypes}
                     allowMultiselect={true} // true by default, set to false to disable multi select.
-                    onSelect={this.onSelect}
+                    onSelect={(node) => this.onSelect(node)}
                     onCreateNode={this.onCreateNode}
                     onUpdateNode={(node) => this.onUpdateNode(node)}
                     onDeleteNode={this.onDeleteNode}
@@ -138,6 +174,15 @@ class Graph extends React.Component {
                     onDeleteEdge={this.onDeleteEdge}
                     onBackgroundClick={this.onBackgroundClick}
                 />
+                <Modal
+                    open={this.state.mountProcessorOptions}
+                    onClose={() => this.unMountProcessorOptions()}
+                    className={this.styles.root}
+                >
+                    <ProcessorOption
+                        className={this.styles.root}
+                    />
+                </Modal>
             </div>
         );
     }
