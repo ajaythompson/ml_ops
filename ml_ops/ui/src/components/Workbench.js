@@ -9,7 +9,8 @@ import styles from './Workbench.css';
 import { getProcessorList, createWorkflow } from '../api/Workbench';
 import Canvas from './Canvas';
 import ProcessorConfig from './ProcessorConfig'
-import { getProcessorDescription } from '../api/Workbench';
+import RelationConfig from './RelationConfig';
+import { getProcessorDescription, runWorkflow } from '../api/Workbench';
 import Graph from './Graph';
 
 
@@ -36,6 +37,8 @@ export default function Workbench() {
     const [workflow, setWorkflow] = React.useState(null)
     const [mountProcessorConfig, setMountProcessorConfig] = React.useState(false)
     const [processorConfig, setProcessorConfig] = React.useState(null)
+    const [mountRelationConfig, setMountRelationConfig] = React.useState(false)
+    const [relationConfig, setRelationConfig] = React.useState(null)
 
 
     function hideProcessorList() {
@@ -51,6 +54,10 @@ export default function Workbench() {
 
     function hideProcessorConfig() {
         setMountProcessorConfig(false)
+    }
+
+    function hideRelationConfig() {
+        setMountRelationConfig(false)
     }
 
     function showProcessorConfig(processorType) {
@@ -74,6 +81,10 @@ export default function Workbench() {
         });
     }
 
+    function execWorkflow() {
+        runWorkflow(workflow.id).then(response => console.log("done"))
+    }
+
 
     const renderWorkflow = (x) => {
 
@@ -85,7 +96,10 @@ export default function Workbench() {
                     </h1>
                 </div>)
         } else {
-            return (<Graph graph={x} setWorkflow={setWorkflow} />)
+            return (<Graph graph={x}
+                setWorkflow={setWorkflow}
+                setMountRelationConfig={setMountRelationConfig}
+                setRelationConfig={setRelationConfig} />)
         }
     }
 
@@ -100,6 +114,9 @@ export default function Workbench() {
                         onClick={newWorkflow}>W</Button>
                     <Button variant="contained"
                         onClick={showProcessorList}>P</Button>
+                    <Button variant="contained"
+                        onClick={execWorkflow}>R</Button>
+                    <div>HELLO</div>
                 </Toolbar>
             </AppBar>
             <Modal
@@ -118,6 +135,16 @@ export default function Workbench() {
                 className={styles.paper}>
                 <ProcessorConfig
                     config={processorConfig}
+                    workflow={workflow}
+                    setWorkflow={setWorkflow}
+                />
+            </Modal>
+            <Modal
+                open={mountRelationConfig}
+                onClose={hideRelationConfig}
+                className={styles.paper}>
+                <RelationConfig
+                    config={relationConfig}
                     workflow={workflow}
                     setWorkflow={setWorkflow}
                 />

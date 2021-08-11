@@ -123,6 +123,13 @@ def run_processor(workflow_id, processor_id):
     return {'result': result}
 
 
+@app.route(f'{WORKFLOW_BASE_PATH}/<workflow_id>/run', methods=['POST'])
+def run_workflow(workflow_id):
+    workflow_manager.run(workflow_id, spark)
+
+    return {'status': 'OK'}
+
+
 @app.route(f'{WORKFLOW_BASE_PATH}/<workflow_id>/connection',
            methods=['POST'])
 def add_connection(workflow_id):

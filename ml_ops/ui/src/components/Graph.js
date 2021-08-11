@@ -8,11 +8,9 @@ import {
     BwdlTransformer, // optional, Example JSON transformer
     GraphUtils // optional, useful utility functions
 } from 'react-digraph';
-import Modal from '@material-ui/core/Modal'
 import React from 'react';
 import { addRelation, updateProcessor } from '../api/Workbench'
-import ProcessorOption from './ProcessorOption';
-import styles from './Workbench.css';
+
 
 const GraphConfig = {
     NodeTypes: {
@@ -56,9 +54,7 @@ class Graph extends React.Component {
     constructor(props) {
         super(props);
 
-        this.state = {
-            "mountProcessorOptions": false
-        }
+        this.state = {}
     }
 
     /* Define custom graph editing methods here */
@@ -91,12 +87,15 @@ class Graph extends React.Component {
             "target": target.id
         }
 
-        addRelation(workflowId, data)
-            .then(
-                resp => {
-                    this.props.setWorkflow(resp.data)
-                }
-            )
+        // addRelation(workflowId, data)
+        //     .then(
+        //         resp => {
+        //             this.props.setWorkflow(resp.data)
+        //         }
+        //     )
+
+        this.props.setMountRelationConfig(true)
+        this.props.setRelationConfig(data)
 
     }
 
@@ -111,14 +110,6 @@ class Graph extends React.Component {
             )
     }
 
-    unMountProcessorOptions() {
-        this.setState(
-            prevState => ({
-                ...prevState,
-                "mountProcessorOptions": false
-            })
-        )
-    }
 
     styles = {
         graph: {
@@ -174,15 +165,6 @@ class Graph extends React.Component {
                     onDeleteEdge={this.onDeleteEdge}
                     onBackgroundClick={this.onBackgroundClick}
                 />
-                <Modal
-                    open={this.state.mountProcessorOptions}
-                    onClose={() => this.unMountProcessorOptions()}
-                    className={this.styles.root}
-                >
-                    <ProcessorOption
-                        className={this.styles.root}
-                    />
-                </Modal>
             </div>
         );
     }
