@@ -3,6 +3,9 @@ import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import { Button } from '@material-ui/core';
 import { addRelation } from '../api/Workbench';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
+import InputLabel from '@material-ui/core/InputLabel';
 
 function getModalStyle() {
     const top = 50
@@ -24,6 +27,10 @@ const useStyles = makeStyles((theme) => ({
         boxShadow: theme.shadows[5],
         padding: theme.spacing(2, 4, 3),
     },
+    formControl: {
+        margin: theme.spacing(1),
+        minWidth: 120,
+    }
 }));
 
 
@@ -58,34 +65,32 @@ export default function RelationConfig(props) {
             )
     }
 
-    function connectionInput(props) {
-        return (
-            props.map(
-                property =>
-                    <div key={property.name}>
-                        <TextField
-                            id={property.name}
-                            label={property.name}
-                            onChange={handleChange}
-                        />
-                    </div>
-            )
-
+    const getMenuItems = () => {
+        console.log("here")
+        console.log(props.relations)
+        return props.relations.map(
+            relation => {
+                return (
+                    <MenuItem>{relation}</MenuItem>
+                )
+            }
         )
     }
 
-
     return (
         <div style={modalStyle} className={classes.paper}>
-            <form onSubmit={handleSubmit}>
-                {/* {connectionInput(props.config.options)} */}
+            <form onSubmit={handleSubmit} className={classes.formControl}>
                 <div key='relation'>
-                    <TextField
-                        id='relation'
-                        label='relation'
+                    <InputLabel id="demo-simple-select-label">Relation</InputLabel>
+                    <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
                         onChange={handleChange}
-                    />
+                    >
+                        {getMenuItems()}
+                    </Select>
                 </div>
+
                 <div>
                     <Button type="Submit" variant="contained" color="primary">Ok</Button>
                 </div>

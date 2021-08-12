@@ -57,6 +57,8 @@ class SparkProcessor(ABC):
         result['type'] = self.__class__.__name__
         result['properties'] = [
             x.__dict__ for x in self.get_property_descriptors()]
+        result['relations'] = [
+            x.__dict__ for x in self.get_relations()]
         return result
 
 

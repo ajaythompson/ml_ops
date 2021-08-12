@@ -72,6 +72,7 @@ class Graph extends React.Component {
                 "mountProcessorOptions": true
             })
         )
+        this.props.setSelectedProcessor(node)
         console.log(this.state)
     }
 
@@ -87,15 +88,9 @@ class Graph extends React.Component {
             "target": target.id
         }
 
-        // addRelation(workflowId, data)
-        //     .then(
-        //         resp => {
-        //             this.props.setWorkflow(resp.data)
-        //         }
-        //     )
+        this.props.mountRelationSelector(data)
 
-        this.props.setMountRelationConfig(true)
-        this.props.setRelationConfig(data)
+        console.log(data)
 
     }
 

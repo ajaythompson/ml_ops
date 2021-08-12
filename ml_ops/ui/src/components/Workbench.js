@@ -7,7 +7,6 @@ import Toolbar from '@material-ui/core/Toolbar'
 import ProcessorList from './ProcessorList';
 import styles from './Workbench.css';
 import { getProcessorList, createWorkflow } from '../api/Workbench';
-import Canvas from './Canvas';
 import ProcessorConfig from './ProcessorConfig'
 import RelationConfig from './RelationConfig';
 import { getProcessorDescription, runWorkflow } from '../api/Workbench';
@@ -37,8 +36,12 @@ export default function Workbench() {
     const [workflow, setWorkflow] = React.useState(null)
     const [mountProcessorConfig, setMountProcessorConfig] = React.useState(false)
     const [processorConfig, setProcessorConfig] = React.useState(null)
-    const [mountRelationConfig, setMountRelationConfig] = React.useState(false)
+    const [showRelationConfig, setShowRelationConfig] = React.useState(false)
+
+    // relation states
     const [relationConfig, setRelationConfig] = React.useState(null)
+    const [selectedProcessor, setSelectedProcessor] = React.useState(null)
+    const [relations, setRelations] = React.useState(null)
 
 
     function hideProcessorList() {
@@ -57,7 +60,20 @@ export default function Workbench() {
     }
 
     function hideRelationConfig() {
-        setMountRelationConfig(false)
+        setShowRelationConfig(false)
+    }
+
+    function mountRelationSelector(data) {
+        const nodes = workflow.nodes
+        const nodes_map = new Map(nodes.map(e => [e.id, e]))
+        const processorType = nodes_map.get(data.target).processor_type
+        getProcessorDescription(processorType).then(
+            resp => {
+                setRelations(resp.data.relations.map(x => x.name))
+                console.log(relations)
+                setShowRelationConfig(true)
+            }
+        )
     }
 
     function showProcessorConfig(processorType) {
@@ -98,8 +114,9 @@ export default function Workbench() {
         } else {
             return (<Graph graph={x}
                 setWorkflow={setWorkflow}
-                setMountRelationConfig={setMountRelationConfig}
-                setRelationConfig={setRelationConfig} />)
+                mountRelationSelector={mountRelationSelector}
+                setSelectedProcessor={setSelectedProcessor}
+            />)
         }
     }
 
@@ -140,13 +157,14 @@ export default function Workbench() {
                 />
             </Modal>
             <Modal
-                open={mountRelationConfig}
+                open={showRelationConfig}
                 onClose={hideRelationConfig}
                 className={styles.paper}>
                 <RelationConfig
                     config={relationConfig}
                     workflow={workflow}
                     setWorkflow={setWorkflow}
+                    relations={relations}
                 />
             </Modal>
             {renderWorkflow(workflow)}
