@@ -13,22 +13,6 @@ import { getProcessorDescription, runWorkflow } from '../api/Workbench';
 import Graph from './Graph';
 
 
-const data = {
-    "edges": [],
-    "id": "1c1177fc-f512-11eb-a1f4-00155de8c683",
-    "nodes": [
-        {
-            "id": "1e5a2f54-f512-11eb-b072-00155de8c683",
-            "title": "asdf",
-            "processor_type": "LoadProcessor",
-            "properties": {},
-            "type": "node",
-            "x": 0,
-            "y": 0
-        }
-    ]
-}
-
 export default function Workbench() {
 
     const [processorListEnabled, setProcessorListEnabled] = React.useState(false)
@@ -70,6 +54,7 @@ export default function Workbench() {
         getProcessorDescription(processorType).then(
             resp => {
                 setRelations(resp.data.relations.map(x => x.name))
+                setRelationConfig(data)
                 console.log(relations)
                 setShowRelationConfig(true)
             }

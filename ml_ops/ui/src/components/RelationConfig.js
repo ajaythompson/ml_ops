@@ -6,6 +6,7 @@ import { addRelation } from '../api/Workbench';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import InputLabel from '@material-ui/core/InputLabel';
+import FormControl from '@material-ui/core/FormControl';
 
 function getModalStyle() {
     const top = 50
@@ -41,7 +42,7 @@ export default function RelationConfig(props) {
 
     const handleChange = e => {
         const target = e.target
-        const name = target.id
+        const name = "relation"
         const value = target.value
         setProperties(prevState => ({
             ...prevState,
@@ -53,6 +54,7 @@ export default function RelationConfig(props) {
     const handleSubmit = (event) => {
         // Prevent default behavior
         event.preventDefault();
+        console.log(props)
         const body = {
             "source": props.config.source,
             "target": props.config.target,
@@ -66,12 +68,10 @@ export default function RelationConfig(props) {
     }
 
     const getMenuItems = () => {
-        console.log("here")
-        console.log(props.relations)
         return props.relations.map(
             relation => {
                 return (
-                    <MenuItem>{relation}</MenuItem>
+                    <MenuItem value={relation}>{relation}</MenuItem>
                 )
             }
         )
@@ -80,18 +80,17 @@ export default function RelationConfig(props) {
     return (
         <div style={modalStyle} className={classes.paper}>
             <form onSubmit={handleSubmit} className={classes.formControl}>
-                <div key='relation'>
-                    <InputLabel id="demo-simple-select-label">Relation</InputLabel>
-                    <Select
-                        labelId="demo-simple-select-label"
-                        id="demo-simple-select"
-                        onChange={handleChange}
-                    >
-                        {getMenuItems()}
-                    </Select>
-                </div>
-
+                <InputLabel id="demo-simple-select-label">Relation</InputLabel>
+                <Select
+                    labelId="demo-simple-select-label"
+                    id="demo-simple-select"
+                    value={props[0]}
+                    onChange={handleChange}
+                >
+                    {getMenuItems()}
+                </Select>
                 <div>
+
                     <Button type="Submit" variant="contained" color="primary">Ok</Button>
                 </div>
             </form>
