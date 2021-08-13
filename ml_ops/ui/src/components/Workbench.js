@@ -3,6 +3,8 @@ import AppBar from '@material-ui/core/AppBar'
 import Button from '@material-ui/core/Button'
 import Modal from '@material-ui/core/Modal'
 import Toolbar from '@material-ui/core/Toolbar'
+import { makeStyles } from '@material-ui/core/styles';
+
 
 import ProcessorList from './ProcessorList';
 import styles from './Workbench.css';
@@ -12,8 +14,32 @@ import RelationConfig from './RelationConfig';
 import { getProcessorDescription, runWorkflow } from '../api/Workbench';
 import Graph from './Graph';
 
+const useStyles = makeStyles((theme) => ({
+    menuButton: {
+        marginRight: theme.spacing(2),
+    },
+    root: {
+        flexGrow: 1,
+    },
+    paper: {
+        "color": "yellow",
+        "display": "none", /* Hidden by default */
+        "position": "fixed", /* Stay in place */
+        "z-index": "1", /* Sit on top */
+        "left": "0",
+        "top": "0",
+        "width": "10%", /* Full width */
+        "height": "30%", /* Full height */
+        "overflow": "auto", /* Enable scroll if needed */
+        "background-color": "rgb(0,0,0)", /* Fallback color */
+        "background-color": "rgba(0,0,0,0.4)", /* Black w/ opacity */
+    }
+}))
+
 
 export default function Workbench() {
+
+    const classes = useStyles();
 
     const [processorListEnabled, setProcessorListEnabled] = React.useState(false)
     const [processors, setProcessors] = React.useState([])
@@ -109,16 +135,21 @@ export default function Workbench() {
 
 
     return (
-        <div>
+        <div className={classes.root}>
             <AppBar position="static">
                 <Toolbar>
                     <Button variant="contained"
                         onClick={newWorkflow}>W</Button>
                     <Button variant="contained"
                         onClick={showProcessorList}>P</Button>
-                    <Button variant="contained"
-                        onClick={execWorkflow}>R</Button>
-                    <div>HELLO</div>
+                    <Button
+                        onClick={execWorkflow}
+                        className={classes.menuButton}
+                        variant="outline"
+                        color="inherit"
+                    >
+                        R
+                    </Button>
                 </Toolbar>
             </AppBar>
             <Modal
