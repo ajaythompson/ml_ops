@@ -3,6 +3,7 @@ import AppBar from '@material-ui/core/AppBar'
 import Button from '@material-ui/core/Button'
 import Modal from '@material-ui/core/Modal'
 import Toolbar from '@material-ui/core/Toolbar'
+import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 
 
@@ -16,7 +17,7 @@ import Graph from './Graph';
 
 const useStyles = makeStyles((theme) => ({
     menuButton: {
-        marginRight: theme.spacing(2),
+        marginLeft: "auto",
     },
     root: {
         flexGrow: 1,
@@ -112,6 +113,23 @@ export default function Workbench() {
         runWorkflow(workflow.id).then(response => console.log("done"))
     }
 
+    function getWorkflowId() {
+        if (workflow == null) {
+            return "No Workflow Selected!"
+        } else {
+            return workflow.id
+        }
+    }
+
+    function getProcessorId() {
+        var result = "No processor Selected!"
+
+        if (selectedProcessor != null && "nodes" in selectedProcessor) {
+            result = selectedProcessor.nodes.entries().next().value[0]
+        }
+
+        return result
+    }
 
     const renderWorkflow = (x) => {
 
@@ -142,14 +160,21 @@ export default function Workbench() {
                         onClick={newWorkflow}>W</Button>
                     <Button variant="contained"
                         onClick={showProcessorList}>P</Button>
-                    <Button
-                        onClick={execWorkflow}
-                        className={classes.menuButton}
-                        variant="outline"
-                        color="inherit"
-                    >
-                        R
-                    </Button>
+                    <Typography variant="title" color="inherit">
+                        {getWorkflowId()}
+                    </Typography>
+                    <div className={classes.menuButton}>
+                        <Typography variant="title" color="inherit">
+                            {getProcessorId()}
+                        </Typography>
+                        <Button
+                            onClick={execWorkflow}
+                            variant="outline"
+                            color="inherit">
+                            R
+                        </Button>
+                    </div>
+
                 </Toolbar>
             </AppBar>
             <Modal
