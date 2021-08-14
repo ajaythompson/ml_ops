@@ -1,8 +1,8 @@
 id: 41550f9a-c850-11eb-a55e-d90d76bdfe70
-processors:
+nodes:
   - id: 41550f9b-c850-11eb-a55e-d90d76bdfe70
     name: load sensor data
-    type: LoadStreamProcessor
+    processor_type: LoadStreamProcessor
     properties:
       path: "examples/stream/input"
       format: csv
@@ -29,7 +29,7 @@ processors:
       read.checkpointLocation: examples/stream/checkpoint
   - id: 41550f9d-c850-11eb-a55e-d90d76bdfe70
     name: compute mean and stddev
-    type: SQLProcessor
+    processor_type: SQLProcessor
     properties:
       view_name: sensor_grouped_data
       query: SELECT sensor_id, mean(value) AS mean, stddev(value) AS stddev
@@ -37,7 +37,7 @@ processors:
         GROUP BY sensor_id
   - id: 41550f9e-c850-11eb-a55e-d90d76bdfe70
     name: compute upper and lower limit
-    type: SQLProcessor
+    processor_type: SQLProcessor
     properties:
       view_name: final
       query: SELECT sensor_id, mean, stddev,
@@ -46,23 +46,23 @@ processors:
         FROM sensor_grouped_data
   - id: 41550f9f-c850-11eb-a55e-d90d76bdfe70
     name: write outliers data
-    type: WriteStreamProcessor
+    processor_type: WriteStreamProcessor
     properties:
       path: "examples/stream/output"
       format: console
       mode: complete
       write.header: "true"
       write.checkpointLocation: examples/stream/checkpoint
-relations:
+edges:
   - id: 41550f9f-c850-11eb-a55e-d90d76bdfe70
-    left: 41550f9b-c850-11eb-a55e-d90d76bdfe70
-    right: 41550f9d-c850-11eb-a55e-d90d76bdfe70
+    source: 41550f9b-c850-11eb-a55e-d90d76bdfe70
+    target: 41550f9d-c850-11eb-a55e-d90d76bdfe70
     relation: INPUT
   - id: 41550fa0-c850-11eb-a55e-d90d76bdfe70
-    left: 41550f9d-c850-11eb-a55e-d90d76bdfe70
-    right: 41550f9e-c850-11eb-a55e-d90d76bdfe70
+    source: 41550f9d-c850-11eb-a55e-d90d76bdfe70
+    target: 41550f9e-c850-11eb-a55e-d90d76bdfe70
     relation: INPUT
   - id: 41550fa1-c850-11eb-a55e-d90d76bdfe70
-    left: 41550f9e-c850-11eb-a55e-d90d76bdfe70
-    right: 41550f9f-c850-11eb-a55e-d90d76bdfe70
+    source: 41550f9e-c850-11eb-a55e-d90d76bdfe70
+    target: 41550f9f-c850-11eb-a55e-d90d76bdfe70
     relation: INPUT
