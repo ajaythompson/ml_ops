@@ -1,10 +1,10 @@
 {
     "id": "41550f9a-c850-11eb-a55e-d90d76bdfe70",
-    "processors": [
+    "nodes": [
         {
             "id": "41550f9b-c850-11eb-a55e-d90d76bdfe70",
             "name": "load_employee",
-            "type": "LoadProcessor",
+            "processor_type": "LoadProcessor",
             "properties": {
                 "path": "##FIXTURE_DIR##/employee.csv",
                 "format": "csv",
@@ -15,7 +15,7 @@
         {
             "id": "41550f9c-c850-11eb-a55e-d90d76bdfe70",
             "name": "load_department",
-            "type": "LoadProcessor",
+            "processor_type": "LoadProcessor",
             "properties": {
                 "path": "##FIXTURE_DIR##/department.csv",
                 "format": "csv",
@@ -26,7 +26,7 @@
         {
             "id": "41550f9d-c850-11eb-a55e-d90d76bdfe70",
             "name": "join_emp_dept",
-            "type": "SQLProcessor",
+            "processor_type": "SQLProcessor",
             "properties": {
                 "query": "SELECT emp_id, name, department.dept FROM employee JOIN department  ON employee.dept_id = department.dept_id WHERE emp_id='1'"
             }
@@ -34,7 +34,7 @@
         {
             "id": "41550f9e-c850-11eb-a55e-d90d76bdfe70",
             "name": "write_enriched_data",
-            "type": "WriteProcessor",
+            "processor_type": "WriteProcessor",
             "properties": {
                 "path": "##FIXTURE_DIR##/output/enriched_employee",
                 "format": "csv",
@@ -42,21 +42,21 @@
             }
         }
     ],
-    "relations": [
+    "edges": [
         {
             "id": "41550f9f-c850-11eb-a55e-d90d76bdfe70",
-            "left": "41550f9b-c850-11eb-a55e-d90d76bdfe70",
-            "right": "41550f9d-c850-11eb-a55e-d90d76bdfe70"
+            "source": "41550f9b-c850-11eb-a55e-d90d76bdfe70",
+            "target": "41550f9d-c850-11eb-a55e-d90d76bdfe70"
         },
         {
             "id": "41550fa0-c850-11eb-a55e-d90d76bdfe70",
-            "left": "41550f9c-c850-11eb-a55e-d90d76bdfe70",
-            "right": "41550f9d-c850-11eb-a55e-d90d76bdfe70"
+            "source": "41550f9c-c850-11eb-a55e-d90d76bdfe70",
+            "target": "41550f9d-c850-11eb-a55e-d90d76bdfe70"
         },
         {
             "id": "41550fa1-c850-11eb-a55e-d90d76bdfe70",
-            "left": "41550f9d-c850-11eb-a55e-d90d76bdfe70",
-            "right": "41550f9e-c850-11eb-a55e-d90d76bdfe70",
+            "source": "41550f9d-c850-11eb-a55e-d90d76bdfe70",
+            "target": "41550f9e-c850-11eb-a55e-d90d76bdfe70",
             "relation": "INPUT"
         }
     ]

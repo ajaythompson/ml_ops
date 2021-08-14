@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import List, Union
 
 import networkx as nx
 from networkx.classes.digraph import DiGraph
@@ -23,29 +23,51 @@ class ProcessorConfig:
                  name,
                  processor_type,
                  properties,
-                 processor_id=None):
+                 processor_id=None,
+                 x=None,
+                 y=None):
         if processor_id is None:
             processor_id = str(uuid.uuid1())
+
+        if x is None:
+            x = 0
+
+        if y is None:
+            y = 0
+
         self.processor_id = processor_id
         self.name = name
         self.processor_type = processor_type
         self.properties = properties
+        self.x = x
+        self.y = y
 
     def json_value(self):
+
+        title = self.name
+
+        if title is None:
+            title = self.processor_type
+
         json_value = {
             'id': self.processor_id,
-            'name': self.name,
-            'type': self.processor_type,
-            'properties': self.properties
+            'title': title,
+            'processor_type': self.processor_type,
+            'properties': self.properties,
+            'x': self.x,
+            'y': self.y,
+            'type': 'node',
         }
         return json_value
 
     @classmethod
     def get_processor(cls, config: dict) -> ProcessorConfig:
         processor_id = config.get('id', str(uuid.uuid1()))
-        name = config.get('name', '')
-        processor_type = config.get('type')
+        processor_type = config.get('processor_type')
+        title = config.get('name', processor_type)
         properties = config.get('properties', {})
+        x = config.get('x')
+        y = config.get('y')
 
         if processor_id is None:
             raise WorkflowConfigException('Missing processor id in config.')
@@ -57,10 +79,12 @@ class ProcessorConfig:
             )
 
         return ProcessorConfig(
-            name=name,
+            name=title,
             processor_type=processor_type,
             properties=properties,
-            processor_id=processor_id
+            processor_id=processor_id,
+            x=x,
+            y=y
         )
 
 
@@ -77,8 +101,9 @@ class ConnectionConfig:
     def json_value(self):
         json_value = {
             'id': self.connection_id,
-            'left': self.left,
-            'right': self.right
+            'source': self.left,
+            'target': self.right,
+            'type': 'edge',
         }
 
         if self.relation is not None:
@@ -89,8 +114,8 @@ class ConnectionConfig:
     @classmethod
     def get_relation(cls, config: dict) -> ConnectionConfig:
         relation_id = config.get('id', str(uuid.uuid1()))
-        left = config.get('left')
-        right = config.get('right')
+        left = config.get('source')
+        right = config.get('target')
         relation = config.get('relation')
 
         if relation_id is None:
@@ -130,8 +155,8 @@ class Workflow:
         workflow_id = config.get('id')
         if workflow_id is None:
             raise WorkflowConfigException('Missing workflow id in config.')
-        processors = config.get('processors', [])
-        relations = config.get('relations', [])
+        processors = config.get('nodes', [])
+        relations = config.get('edges', [])
 
         processor_list = [ProcessorConfig.get_processor(processor_config) for
                           processor_config in processors]
@@ -155,8 +180,8 @@ class Workflow:
 
         json_value = {
             'id': self.id,
-            'processors': json_processors,
-            'relations': json_relations
+            'nodes': json_processors,
+            'edges': json_relations
         }
         return json_value
 
@@ -234,6 +259,15 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
+    def get_workflows(self) -> List[Workflow]:
+        """Adds a new workflow.
+
+        Returns:
+            str: workflow.
+        """
+        pass
+
+    @abstractmethod
     def read_workflow(self, id: str) -> Workflow:
         """Fetch the workflow for the given id.
 
@@ -275,6 +309,9 @@ class InMemoryWFRepository(WorkflowRepository, dict):
         workflow = Workflow()
         self[workflow.id] = workflow
         return workflow
+
+    def get_workflows(self) -> List[Workflow]:
+        return self.values()
 
     def read_workflow(self, id: str) -> Workflow:
         return self.get(id)

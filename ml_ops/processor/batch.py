@@ -3,10 +3,11 @@ from typing import List
 from ml_ops.processor import ActionProcessor, FlowDF, RelationDescriptor
 from ml_ops.processor import ProcessorContext
 from ml_ops.processor import PropertyDescriptorBuilder
+from ml_ops.processor import SparkProcessor
 from ml_ops.processor import TransformProcessor
 
 
-class LoadProcessor(TransformProcessor):
+class LoadProcessor(SparkProcessor, TransformProcessor):
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -53,7 +54,7 @@ class LoadProcessor(TransformProcessor):
         return FlowDF(df, dependency_config)
 
 
-class SQLProcessor(TransformProcessor):
+class SQLProcessor(SparkProcessor, TransformProcessor):
     QUERY = PropertyDescriptorBuilder() \
         .name('query') \
         .description('query to be executed.') \
@@ -89,7 +90,7 @@ class SQLProcessor(TransformProcessor):
         return FlowDF(df, dependency_config)
 
 
-class WriteProcessor(ActionProcessor):
+class WriteProcessor(SparkProcessor, ActionProcessor):
 
     PATH = PropertyDescriptorBuilder() \
         .name('path') \

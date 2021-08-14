@@ -3,7 +3,7 @@ from typing import List
 
 from pyspark.sql.types import StructType
 
-from ml_ops.processor import ActionProcessor, FlowDF, \
+from ml_ops.processor import ActionProcessor, FlowDF, SparkProcessor, \
     ProcessorContext, TransformProcessor, RelationDescriptor
 from ml_ops.processor.configuration_constants import TRIGGER_TYPES, \
     ONCE_TRIGGER_TYPE
@@ -11,7 +11,7 @@ from ml_ops.processor.property import PropertyDescriptorBuilder, \
     get_boolean_value
 
 
-class LoadStreamProcessor(TransformProcessor):
+class LoadStreamProcessor(SparkProcessor, TransformProcessor):
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \
@@ -88,7 +88,7 @@ class LoadStreamProcessor(TransformProcessor):
         return FlowDF(df, dependency_config)
 
 
-class WriteStreamProcessor(ActionProcessor):
+class WriteStreamProcessor(SparkProcessor, ActionProcessor):
     PATH = PropertyDescriptorBuilder() \
         .name('path') \
         .description('Path or table name to load.') \

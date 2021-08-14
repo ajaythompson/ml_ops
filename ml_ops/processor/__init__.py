@@ -52,8 +52,17 @@ class SparkProcessor(ABC):
             processor_context) -> Union[FlowDF, None]:
         pass
 
+    def to_json(self) -> dict:
+        result = {}
+        result['type'] = self.__class__.__name__
+        result['properties'] = [
+            x.__dict__ for x in self.get_property_descriptors()]
+        result['relations'] = [
+            x.__dict__ for x in self.get_relations()]
+        return result
 
-class TransformProcessor(SparkProcessor):
+
+class TransformProcessor:
 
     VIEW_NAME = PropertyDescriptorBuilder() \
         .name('view_name') \
@@ -66,7 +75,7 @@ class TransformProcessor(SparkProcessor):
         pass
 
 
-class ActionProcessor(SparkProcessor):
+class ActionProcessor:
 
     @abstractmethod
     def run(self, processor_context) -> None:

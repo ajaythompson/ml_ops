@@ -34,7 +34,8 @@ sklearn = [
 EXTRAS_REQUIREMENTS['sklearn'] = sklearn
 
 ui = [
-    'flask==2.0.1'
+    'flask==2.0.1',
+    'flask-cors==3.0.10'
 ]
 
 EXTRAS_REQUIREMENTS['ui'] = ui
