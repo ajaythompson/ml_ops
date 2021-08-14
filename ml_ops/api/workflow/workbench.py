@@ -1,4 +1,5 @@
 from typing import Dict
+import uuid
 
 from flask import g, Flask, request, render_template, send_from_directory
 from flask_cors import CORS
@@ -110,11 +111,12 @@ def add_processor(workflow_id):
 
     if request.method == 'PUT':
         if processor_id is None:
-            raise Exception('Processor id can not be None for update request.')
+            processor_id = str(uuid.uuid1())
+            processor_config.processor_id = processor_id
         return workflow.update_processor(processor_id,
                                          processor_config).json_value()
-    else:
-        return workflow.add_processor(processor_config).json_value()
+    elif request.method == 'DELETE':
+        return workflow.remove_processor(processor_id)
 
 
 @app.route(f'{WORKFLOW_BASE_PATH}/<workflow_id>/run/<processor_id>')

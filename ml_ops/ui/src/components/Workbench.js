@@ -53,6 +53,7 @@ export default function Workbench() {
     const [relationConfig, setRelationConfig] = React.useState(null)
     const [selectedProcessor, setSelectedProcessor] = React.useState(null)
     const [relations, setRelations] = React.useState(null)
+    const [propertyValues, setPropertyValues] = React.useState({})
 
 
     function hideProcessorList() {
@@ -61,6 +62,8 @@ export default function Workbench() {
 
     function showProcessorList() {
         getProcessorList().then(response => {
+            setSelectedProcessor(null)
+            setPropertyValues({})
             setProcessors(response.data.processors)
             setProcessorListEnabled(true)
         });
@@ -125,7 +128,10 @@ export default function Workbench() {
         var result = "No processor Selected!"
 
         if (selectedProcessor != null && "nodes" in selectedProcessor) {
-            result = selectedProcessor.nodes.entries().next().value[0]
+            const nodes = selectedProcessor.nodes
+            if (nodes != null) {
+                result = nodes.entries().next().value[0]
+            }
         }
 
         return result
@@ -149,7 +155,19 @@ export default function Workbench() {
         }
     }
 
-
+    const editProcessor = () => {
+        const processor = selectedProcessor.nodes.entries().next().value[1]
+        const processorType = processor.processor_type
+        console.log(processorType)
+        getProcessorDescription(processorType)
+            .then(
+                response => {
+                    setProcessorConfig(response.data)
+                    setPropertyValues(processor)
+                    setMountProcessorConfig(true)
+                }
+            )
+    }
 
 
     return (
@@ -169,9 +187,15 @@ export default function Workbench() {
                         </Typography>
                         <Button
                             onClick={execWorkflow}
-                            variant="outline"
+                            variant="contained"
                             color="inherit">
                             R
+                        </Button>
+                        <Button
+                            onClick={editProcessor}
+                            variant="contained"
+                            color="inherit">
+                            E
                         </Button>
                     </div>
 
@@ -195,6 +219,7 @@ export default function Workbench() {
                     config={processorConfig}
                     workflow={workflow}
                     setWorkflow={setWorkflow}
+                    propertyValues={propertyValues}
                 />
             </Modal>
             <Modal

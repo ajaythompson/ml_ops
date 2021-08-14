@@ -9,7 +9,7 @@ import {
     GraphUtils // optional, useful utility functions
 } from 'react-digraph';
 import React from 'react';
-import { addRelation, updateProcessor } from '../api/Workbench'
+import { addRelation, updateProcessor, deleteProcessor } from '../api/Workbench'
 
 
 const GraphConfig = {
@@ -95,9 +95,19 @@ class Graph extends React.Component {
     }
 
     onUpdateNode(node) {
-        console.log('updating')
         const workflowId = this.props.graph.id
         updateProcessor(workflowId, node)
+            .then(
+                resp => {
+                    this.props.setWorkflow(resp.data)
+                }
+            )
+    }
+
+    onDeleteNode(node) {
+        console.log("deleting")
+        const workflowId = this.props.graph.id
+        deleteProcessor(workflowId, node)
             .then(
                 resp => {
                     this.props.setWorkflow(resp.data)
@@ -154,7 +164,7 @@ class Graph extends React.Component {
                     onSelect={(node) => this.onSelect(node)}
                     onCreateNode={this.onCreateNode}
                     onUpdateNode={(node) => this.onUpdateNode(node)}
-                    onDeleteNode={this.onDeleteNode}
+                    onDeleteNode={(node) => this.onDeleteNode(node)}
                     onCreateEdge={(source, target) => this.onCreateEdge(source, target)}
                     onSwapEdge={this.onSwapEdge}
                     onDeleteEdge={this.onDeleteEdge}

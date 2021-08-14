@@ -12,7 +12,11 @@ export const createWorkflow = () => {
 }
 
 export const addProcessor = (workflowId, data) => {
-    return axios.post(`/workflow/${workflowId}/processor`, data)
+    return axios.put(`/workflow/${workflowId}/processor`, data)
+}
+
+export const deleteProcessor = (workflowId, data) => {
+    return axios.delete(`/workflow/${workflowId}/processor`, data)
 }
 
 export const updateProcessor = (workflowId, data) => {

@@ -39,6 +39,14 @@ export default function ProcessorConfig(props) {
     const processorType = props.config.type
     const [properties, setProperties] = React.useState({});
 
+    const body = {}
+
+    if (props.propertyValues != null) {
+        body.id = props.propertyValues.id
+        body.properties = props.propertyValues
+    }
+    body.processor_type = processorType
+
     const handleChange = e => {
         const target = e.target
         const name = target.id
@@ -53,24 +61,30 @@ export default function ProcessorConfig(props) {
     const handleSubmit = (event) => {
         // Prevent default behavior
         event.preventDefault();
-        const body = {
-            "processor_type": processorType,
-            "properties": properties
-        }
-        console.log(body)
+        body.properties = properties
         addProcessor(props.workflow.id, body)
             .then(
                 resp => props.setWorkflow(resp.data)
             )
     }
 
-    function processorInput(props) {
+    const getPropertyValue = (property) => {
+        if ("properties" in props.propertyValues && property in props.propertyValues.properties) {
+            console.log(props.propertyValues.properties[property])
+            return props.propertyValues.properties[property]
+        }
+        console.log(props)
+        return null
+    }
+
+    function processorInput(procConfig) {
         return (
-            props.map(
+            procConfig.map(
                 property =>
                     <div key={property.name}>
                         <TextField
                             id={property.name}
+                            defaultValue={getPropertyValue(property.name)}
                             label={property.name}
                             onChange={handleChange}
                         />
