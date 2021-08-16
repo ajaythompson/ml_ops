@@ -1,12 +1,9 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import FormControl from '@material-ui/core/FormControl';
 import TextField from '@material-ui/core/TextField';
-import Input from '@material-ui/core/Input';
-import InputLabel from '@material-ui/core/InputLabel';
-import { keys } from '@material-ui/core/styles/createBreakpoints';
 import { Button } from '@material-ui/core';
 import { addProcessor } from '../api/Workbench';
+import Divider from '@material-ui/core/Divider';
 
 // import { getProcessorDescription } from '../api/Workbench';
 
@@ -38,7 +35,8 @@ export default function ProcessorConfig(props) {
     const [modalStyle] = React.useState(getModalStyle);
     const processorType = props.config.type
     const [properties, setProperties] = React.useState({});
-
+    const [dynamicProperty, setDynamicProperty] = React.useState({});
+    let dpCounter = 0
     const body = {}
 
     if (props.propertyValues != null) {
@@ -64,7 +62,10 @@ export default function ProcessorConfig(props) {
         body.properties = properties
         addProcessor(props.workflow.id, body)
             .then(
-                resp => props.setWorkflow(resp.data)
+                resp => {
+                    props.setWorkflow(resp.data)
+                    props.setSelectedProcessor(null)
+                }
             )
     }
 
@@ -94,14 +95,64 @@ export default function ProcessorConfig(props) {
         )
     }
 
+    const renderDynamicProperty = () => {
+        return (
+            dynamicProperty.keys().map(
+                prop => {
+                    const key = dynamicProperty[prop].key
+                    const value = dynamicProperty[prop].value
+                    return (
+                        <div key={prop}>
+                            <TextField
+                                id={key}
+                                defaultValue={key}
+                                label={key}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    )
+                }
+            )
+        )
+    }
+
+    const addDynamicPropertyValue = (id, value) => {
+        setDynamicProperty(
+            prevState => ({
+                ...prevState,
+                [`dp${dpCounter}`]: { "key": "key", "value": "value" }
+            })
+        )
+    }
+
+    const handleDynamicKeyChange = (event) => {
+        const target = event.target
+        const name = target.id
+        const value = target.value
+
+        setDynamicProperty(prevState => ({
+            ...prevState,
+            [name]: value
+        }));
+    }
+
 
     return (
         <div style={modalStyle} className={classes.paper}>
             <h1>{props.config.type}</h1>
             <form onSubmit={handleSubmit}>
                 {processorInput(props.config.properties)}
+                <Divider />
                 <div>
-                    <Button type="Submit" variant="contained" color="primary">Ok</Button>
+                    <Button variant="contained" color="primary">
+                        ADD
+                    </Button>
+                </div>
+                <Divider />
+                <div>
+                    <Button type="Submit" variant="contained" color="primary">
+                        OK
+                    </Button>
                 </div>
             </form>
         </div>

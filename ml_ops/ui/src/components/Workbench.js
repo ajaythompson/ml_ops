@@ -220,6 +220,7 @@ export default function Workbench() {
                     workflow={workflow}
                     setWorkflow={setWorkflow}
                     propertyValues={propertyValues}
+                    setSelectedProcessor={setSelectedProcessor}
                 />
             </Modal>
             <Modal
